@@ -1,0 +1,49 @@
+[package]
+name = "betterytmusic"
+version = "0.7.0"
+description = "Lightweight YouTube Music desktop client"
+authors = ["Arda Coşgun <https://github.com/ardacsgn00>"]
+repository = "https://github.com/ardacsgn00/betterytmusic"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+# `_lib` suffix avoids a name clash with the bin target on Windows.
+name = "betterytmusic_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# OS media integration: SMTC (Windows), MPRIS (Linux), MPNowPlayingInfoCenter (macOS).
+# Hardware media keys are routed through these by the OS.
+souvlaki = "0.8"
+ureq = { version = "2.12", default-features = false, features = ["native-tls", "json", "gzip"] }
+native-tls = "0.2"
+sha1 = "0.10"
+rodio = { version = "0.20", default-features = false, features = ["symphonia-aac", "symphonia-isomp4", "symphonia-mp3"] }
+symphonia = { version = "0.5", default-features = false, features = ["aac", "isomp4", "mp3"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Com",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+

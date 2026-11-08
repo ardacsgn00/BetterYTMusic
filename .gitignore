@@ -1,0 +1,11 @@
+# Dependencies & build outputs
+node_modules/
+.svelte-kit/
+build/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# OS & logs
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,226 @@
+/* ==========================================================================
+   Theme tokens
+   - `data-theme` on <html> selects dark/oled/slate/light palette.
+   - `--accent` is user-configurable (set from theme store); derived shades
+     are computed with color-mix so only one variable has to change.
+   ========================================================================== */
+:root {
+  --accent: #ff4e45;
+  --accent-edge: color-mix(in srgb, var(--accent) 68%, #000);
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --on-accent: #ffffff;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --edge-depth: 4px;
+
+  --font: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, 'Inter', Roboto, sans-serif;
+  --font-size: 14px;
+  --sidebar-w: 242px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #121215;
+  --surface: #1c1c21;
+  --surface-2: #26262d;
+  --surface-3: #30303a;
+  --border: #33333c;
+  --edge: #0a0a0c;
+  --text: #f2f2f5;
+  --text-muted: #9b9ba8;
+}
+
+:root[data-theme='oled'] {
+  color-scheme: dark;
+  --bg: #070709;
+  --surface: #101014;
+  --surface-2: #18181f;
+  --surface-3: #22222b;
+  --border: #272732;
+  --edge: #020203;
+  --text: #f5f5f8;
+  --text-muted: #8e8e9d;
+}
+
+:root[data-theme='slate'] {
+  color-scheme: dark;
+  --bg: #0f141c;
+  --surface: #171f2c;
+  --surface-2: #202b3c;
+  --surface-3: #2a384e;
+  --border: #2e3d54;
+  --edge: #080b10;
+  --text: #eef3fa;
+  --text-muted: #94a3b8;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f2f1ed;
+  --surface: #ffffff;
+  --surface-2: #ebe9e4;
+  --surface-3: #dedbd4;
+  --border: #d8d5ce;
+  --edge: #b9b5ac;
+  --text: #19191d;
+  --text-muted: #686874;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--font-size);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 10px;
+  border: 2px solid var(--surface);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ==========================================================================
+   Tactile primitives: solid fills + a darker bottom "edge" that compresses
+   on press. No glows, no gradients.
+   ========================================================================== */
+.card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 var(--edge-depth) 0 var(--edge);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  cursor: pointer;
+  transition:
+    transform 70ms ease,
+    box-shadow 70ms ease,
+    background-color 120ms ease;
+}
+
+.btn:hover {
+  background: var(--surface-3);
+}
+
+.btn:active,
+.btn[aria-pressed='true'] {
+  transform: translateY(2px);
+  box-shadow: 0 min(1px, var(--edge-depth)) 0 var(--edge);
+}
+
+:root[data-edge='none'] .btn:active,
+:root[data-edge='none'] .btn[aria-pressed='true'] {
+  transform: none;
+  box-shadow: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn.icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.btn.accent {
+  background: var(--accent);
+  border-color: var(--accent-edge);
+  color: var(--on-accent);
+  box-shadow: 0 var(--edge-depth) 0 var(--accent-edge);
+}
+
+.btn.accent:hover {
+  background: color-mix(in srgb, var(--accent) 90%, #fff);
+}
+
+.btn.accent:active {
+  box-shadow: 0 min(1px, var(--edge-depth)) 0 var(--accent-edge);
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.btn.ghost:hover {
+  background: var(--surface-2);
+}
+
+.btn.ghost:active {
+  transform: translateY(1px);
+}
+
+.btn.ghost.on {
+  color: var(--accent);
+}
