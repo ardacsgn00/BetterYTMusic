@@ -46,6 +46,7 @@ class PlayerStore {
   lyricsLoading = $state(false);
   lyricsTrackId = $state<string | null>(null);
   outputDevices = $state<string[]>([]);
+  onboardingOpen = $state(false);
 
   #lyricsCache = new Map<string, LyricsData | null>();
   #syncedAt = 0;
@@ -58,9 +59,15 @@ class PlayerStore {
     this.#unlisten = await listen<PlayerSnapshot>('player:state', (e) => this.#apply(e.payload));
     this.#unlistenAuth = await listen<AuthStatus>('auth:changed', (e) => {
       this.auth = e.payload;
+      if (e.payload.loggedIn) {
+        this.onboardingOpen = false;
+      }
     });
     this.#apply(await invoke<PlayerSnapshot>('player_get_state'));
     this.auth = await invoke<AuthStatus>('auth_get_status');
+    if (!this.auth.loggedIn) {
+      this.onboardingOpen = true;
+    }
     try {
       this.settings = await invoke<AppSettings>('settings_get');
     } catch {
@@ -191,6 +198,12 @@ class PlayerStore {
   login = () => invoke('auth_login');
   logout = async () => {
     this.auth = await invoke<AuthStatus>('auth_logout');
+  };
+  openOnboarding = () => {
+    this.onboardingOpen = true;
+  };
+  closeOnboarding = () => {
+    this.onboardingOpen = false;
   };
   updateSettings = async (patch: Partial<AppSettings>) => {
     const next: AppSettings = { ...this.settings, ...patch };

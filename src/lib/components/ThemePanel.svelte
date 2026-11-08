@@ -88,10 +88,16 @@
       <h1>Ayarlar</h1>
       <p class="muted">Görünüm, sistem davranışları, güncelleme denetimi ve uygulama bilgileri.</p>
     </div>
-    <button class="btn" onclick={() => theme.reset()}>
-      <Icon name="refresh" size={16} />
-      Görünümü Sıfırla
-    </button>
+    <div class="head-actions">
+      <button class="btn accent" onclick={player.openOnboarding}>
+        <Icon name="info" size={16} />
+        Tanıtım Rehberi
+      </button>
+      <button class="btn" onclick={() => theme.reset()}>
+        <Icon name="refresh" size={16} />
+        Görünümü Sıfırla
+      </button>
+    </div>
   </header>
 
   <div class="grid">
@@ -475,6 +481,15 @@
             GitHub'da Aç
           </button>
         </div>
+
+        <div class="about-item">
+          <span class="sub-label muted">Başlangıç & Tanıtım</span>
+          <span class="about-val">Özellik Rehberi</span>
+          <button class="btn tour-btn" onclick={player.openOnboarding}>
+            <Icon name="info" size={16} />
+            Rehberi Başlat
+          </button>
+        </div>
       </div>
 
       <div class="update-bar">
@@ -541,6 +556,12 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    flex-wrap: wrap;
+  }
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     flex-wrap: wrap;
   }
   h1 {
@@ -762,6 +783,14 @@
     font-size: 12px;
   }
   .github-btn {
+    margin-top: 2px;
+    min-height: 32px;
+    padding: 0 12px;
+    font-weight: 700;
+    font-size: 12.5px;
+    max-width: 100%;
+  }
+  .tour-btn {
     margin-top: 2px;
     min-height: 32px;
     padding: 0 12px;

@@ -9,6 +9,7 @@
   import SearchView from '#lib/components/SearchView.svelte';
   import HomeView from '#lib/components/HomeView.svelte';
   import LibraryView from '#lib/components/LibraryView.svelte';
+  import OnboardingModal from '#lib/components/OnboardingModal.svelte';
   import { player } from '#lib/player.svelte.ts';
   import { theme } from '#lib/theme.svelte.ts';
   import type { View } from '#lib/types.ts';
@@ -197,6 +198,10 @@
   </main>
 
   <PlayerBar />
+
+  {#if player.onboardingOpen}
+    <OnboardingModal />
+  {/if}
 </div>
 
 <style>

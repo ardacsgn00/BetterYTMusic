@@ -97,7 +97,15 @@
     {/if}
 
     <div class="footer-row">
-      <span class="muted">Masaüstü İstemci</span>
+      <button
+        type="button"
+        class="guide-btn"
+        title="Başlangıç ve Özellik Rehberini Aç"
+        onclick={player.openOnboarding}
+      >
+        <Icon name="info" size={13} />
+        <span>Rehber</span>
+      </button>
       <span class="ver-badge">v{__APP_VERSION__}</span>
     </div>
   </div>
@@ -343,6 +351,26 @@
     justify-content: space-between;
     padding: 0 4px;
     font-size: 11px;
+  }
+  .guide-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  .guide-btn:hover {
+    background: var(--surface-2);
+    color: var(--accent);
+    border-color: var(--border);
   }
   .ver-badge {
     padding: 2px 7px;
