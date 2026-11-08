@@ -1,6 +1,6 @@
 [package]
 name = "betterytmusic"
-version = "0.12.0"
+version = "0.13.0"
 description = "Lightweight YouTube Music desktop client"
 authors = ["Arda Coşgun <https://github.com/ardacsgn00>"]
 repository = "https://github.com/ardacsgn00/betterytmusic"

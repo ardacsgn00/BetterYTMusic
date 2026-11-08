@@ -1,7 +1,17 @@
 import type { View } from '#lib/types.ts';
 
 export type ThemeMode = 'dark' | 'oled' | 'slate' | 'light' | 'system';
-export type FontId = 'system' | 'geometric' | 'rounded' | 'serif' | 'mono';
+export type FontId =
+  | 'system'
+  | 'geometric'
+  | 'bahnschrift'
+  | 'rounded'
+  | 'humanist'
+  | 'gothic'
+  | 'cyber'
+  | 'serif'
+  | 'vintage'
+  | 'mono';
 export type FontScale = 'sm' | 'md' | 'lg';
 export type RadiusScale = 'sharp' | 'normal' | 'round';
 export type EdgeDepth = 'none' | 'subtle' | 'normal' | 'bold';
@@ -39,16 +49,46 @@ export const FONT_PRESETS: { id: FontId; label: string; sample: string; stack: s
     stack: "'Aptos', 'Inter', 'Calibri', 'Segoe UI', sans-serif"
   },
   {
+    id: 'bahnschrift',
+    label: 'Bahnschrift DIN',
+    sample: 'Alman endüstriyel poster stili',
+    stack: "'Bahnschrift', 'DIN Next LT Pro', 'Arial Narrow', sans-serif"
+  },
+  {
     id: 'rounded',
     label: 'Yumuşak & Akıcı',
     sample: 'Geniş ve samimi harfler',
     stack: "'Trebuchet MS', 'Verdana', 'Segoe UI', sans-serif"
   },
   {
+    id: 'humanist',
+    label: 'Sıcak Hümanist',
+    sample: 'Zarif ve doğal tipografi',
+    stack: "'Candara', 'Corbel', 'Optima', 'Segoe UI', sans-serif"
+  },
+  {
+    id: 'gothic',
+    label: 'Century Gothic',
+    sample: 'Dairesel modern albüm tarzı',
+    stack: "'Century Gothic', 'Tw Cen MT', 'Segoe UI', sans-serif"
+  },
+  {
+    id: 'cyber',
+    label: 'Fütüristik Synth',
+    sample: 'Elektronik & synth estetiği',
+    stack: "'Eurostile', 'Century Gothic', 'Segoe UI', sans-serif"
+  },
+  {
     id: 'serif',
     label: 'Editöryal Serif',
     sample: 'Klasik plak ve dergi stili',
     stack: "'Georgia', 'Cambria', 'Times New Roman', serif"
+  },
+  {
+    id: 'vintage',
+    label: 'Vintage Caz Plak',
+    sample: "Sıcak 70'ler caz albüm kapağı",
+    stack: "'Palatino Linotype', 'Garamond', 'Book Antiqua', serif"
   },
   {
     id: 'mono',

@@ -746,6 +746,10 @@
               <span class="insp-v">{theme.showRemainingTime ? 'Kalan Süre (-02:21)' : 'Toplam Süre (03:45)'}</span>
             </div>
             <div class="insp-badge">
+              <span class="insp-k">Yazı Tipi:</span>
+              <span class="insp-v truncate">{(FONT_PRESETS.find((f) => f.id === theme.font) ?? FONT_PRESETS[0]).label}</span>
+            </div>
+            <div class="insp-badge">
               <span class="insp-k">Yazı Boyutu:</span>
               <span class="insp-v">{theme.fontScale === 'sm' ? 'Küçük (13px)' : theme.fontScale === 'lg' ? 'Büyük (15.5px)' : 'Normal (14px)'}</span>
             </div>
