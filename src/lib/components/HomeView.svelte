@@ -14,6 +14,7 @@
   let openedTracks = $state<Track[]>([]);
   let openingPlaylist = $state(false);
   let playingPlaylistId = $state<string | null>(null);
+  let zoomOpen = $state(false);
   let loading = $state(true);
   let error = $state<string | null>(null);
 
@@ -91,6 +92,8 @@
 
   onMount(loadHome);
 </script>
+
+<svelte:window onclick={() => (zoomOpen = false)} />
 
 <section class="view">
   {#if openedPlaylist}
@@ -194,33 +197,58 @@
         <p class="muted">Sana özel seçimler, kişisel mixlerin ve güncel parçalar</p>
       </div>
       <div class="head-actions">
-        <div class="zoom-ctrl" title="Sayfa görünürlük oranı (Ctrl + / Ctrl - / Ctrl 0)">
+        <div class="zoom-pop-wrap">
           <button
             type="button"
-            class="btn zoom-step"
-            disabled={theme.zoom <= 75}
-            aria-label="Küçült"
-            onclick={() => theme.stepZoom(-5)}
+            class="btn"
+            class:accent={zoomOpen || theme.zoom !== 100}
+            aria-expanded={zoomOpen}
+            title="Görünürlük oranını ayarla"
+            onclick={(e) => {
+              e.stopPropagation();
+              zoomOpen = !zoomOpen;
+            }}
           >
-            −
-          </button>
-          <button
-            type="button"
-            class="btn zoom-val"
-            title="%100 ölçeğine sıfırla"
-            onclick={() => theme.setZoom(100)}
-          >
+            <Icon name="search" size={16} />
             %{theme.zoom}
           </button>
-          <button
-            type="button"
-            class="btn zoom-step"
-            disabled={theme.zoom >= 135}
-            aria-label="Büyüt"
-            onclick={() => theme.stepZoom(5)}
-          >
-            +
-          </button>
+
+          {#if zoomOpen}
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="card zoom-popover" onclick={(e) => e.stopPropagation()}>
+              <span class="zp-label muted">Görünürlük Oranı</span>
+              <div class="zp-row">
+                <button
+                  type="button"
+                  class="btn zoom-step"
+                  disabled={theme.zoom <= 75}
+                  aria-label="Küçült"
+                  onclick={() => theme.stepZoom(-5)}
+                >
+                  −
+                </button>
+                <span class="zp-val">%{theme.zoom}</span>
+                <button
+                  type="button"
+                  class="btn zoom-step"
+                  disabled={theme.zoom >= 135}
+                  aria-label="Büyüt"
+                  onclick={() => theme.stepZoom(5)}
+                >
+                  +
+                </button>
+              </div>
+              <button
+                type="button"
+                class="btn zp-reset"
+                disabled={theme.zoom === 100}
+                onclick={() => theme.setZoom(100)}
+              >
+                %100 Varsayılana Sıfırla
+              </button>
+            </div>
+          {/if}
         </div>
 
         {#if tracks.length > 0}
@@ -440,36 +468,54 @@
     gap: 10px;
     flex-wrap: wrap;
   }
-  .zoom-ctrl {
-    display: inline-flex;
+  .zoom-pop-wrap {
+    position: relative;
+  }
+  .zoom-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 40;
+    min-width: 196px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .zp-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+  .zp-row {
+    display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px;
-    border-radius: var(--radius);
-    background: var(--surface);
-    border: 2px solid var(--border);
-    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+    justify-content: space-between;
+    gap: 8px;
   }
   .zoom-step {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
+    width: 38px;
+    height: 36px;
+    min-height: 36px;
     padding: 0;
     font-weight: 800;
-    font-size: 16px;
+    font-size: 18px;
     border-radius: var(--radius-sm);
-    box-shadow: none;
   }
-  .zoom-val {
-    height: 32px;
-    min-height: 32px;
-    min-width: 54px;
-    padding: 0 8px;
+  .zp-val {
     font-weight: 800;
-    font-size: 12.5px;
+    font-size: 15px;
     font-variant-numeric: tabular-nums;
-    border-radius: var(--radius-sm);
-    box-shadow: none;
+    min-width: 52px;
+    text-align: center;
+  }
+  .zp-reset {
+    width: 100%;
+    min-height: 32px;
+    font-size: 12px;
+    font-weight: 700;
   }
   h1 {
     font-size: 26px;

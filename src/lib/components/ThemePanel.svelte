@@ -332,7 +332,6 @@
         <div class="about-item">
           <span class="sub-label muted">Kurulu Sürüm</span>
           <span class="about-val">v{__APP_VERSION__}</span>
-          <span class="about-sub muted">Tauri 2 + Rust + Svelte 5</span>
         </div>
 
         <div class="about-item">
