@@ -100,7 +100,9 @@
     </div>
   </header>
 
-  <div class="grid">
+  <div class="settings-layout">
+    <div class="settings-controls-col">
+      <div class="grid">
     <div class="card block">
       <h2>Tema Paleti</h2>
       <p class="muted">Arka plan ve kart yüzeylerinin renk tonunu belirle.</p>
@@ -540,6 +542,177 @@
       </div>
     </div>
   </div>
+    </div>
+
+    <!-- Right Column: Sticky Live Simulation & Effect Inspector -->
+    <aside class="simulation-col">
+      <div class="card sim-card">
+        <div class="sim-header">
+          <div class="sim-title-wrap">
+            <span class="sim-dot live-dot"></span>
+            <span class="sim-title">Canlı Arayüz Simülasyonu</span>
+          </div>
+          <span class="sim-sub muted">Anlık Değişim & Etki Önizlemesi</span>
+        </div>
+
+        <!-- The Mini BetterYTMusic Window Mockup -->
+        <div class="mini-window">
+          <div class="mw-titlebar">
+            <div class="mw-controls">
+              <span class="mw-dot close"></span>
+              <span class="mw-dot min"></span>
+              <span class="mw-dot max"></span>
+            </div>
+            <span class="mw-title truncate">{theme.appName.trim() || 'BetterYTMusic'}</span>
+            <span class="mw-zoom-badge">%{theme.zoom}</span>
+          </div>
+
+          <div class="mw-body">
+            <!-- Mini Sidebar -->
+            <div class="mw-sidebar" class:collapsed={theme.sidebarCollapsed}>
+              <div class="mw-brand">
+                <span class="mw-logo"><Icon name="play" size={11} /></span>
+                {#if !theme.sidebarCollapsed}
+                  <span class="mw-brand-text truncate">{theme.appName.trim() || 'BetterYTMusic'}</span>
+                {/if}
+              </div>
+              <div class="mw-nav-items">
+                <div class="mw-nav-item active">
+                  <Icon name="now" size={12} />
+                  {#if !theme.sidebarCollapsed}<span>Dinle</span>{/if}
+                </div>
+                <div class="mw-nav-item">
+                  <Icon name="home" size={12} />
+                  {#if !theme.sidebarCollapsed}<span>Ana Sayfa</span>{/if}
+                </div>
+                <div class="mw-nav-item">
+                  <Icon name="search" size={12} />
+                  {#if !theme.sidebarCollapsed}<span>Ara</span>{/if}
+                </div>
+              </div>
+            </div>
+
+            <!-- Mini Content Area -->
+            <div class="mw-content">
+              <div class="mw-content-head">
+                <span class="mw-head-title">Süpermix & Listeler</span>
+                {#if !theme.hideSubtitles}
+                  <span class="mw-head-sub muted">Kişisel miksler ve öneriler</span>
+                {/if}
+              </div>
+
+              <!-- Mini Cards Grid reflecting cardSize, radius, edgeDepth -->
+              <div class="mw-cards-grid" data-size={theme.cardSize}>
+                <div class="mw-card active">
+                  <div class="mw-card-art" style:background-color={theme.accent}>
+                    <Icon name="now" size={15} />
+                    <span class="mw-card-play"><Icon name="play" size={9} /></span>
+                  </div>
+                  <div class="mw-card-info">
+                    <span class="mw-ct truncate">Süpermix'im</span>
+                    <span class="mw-ca truncate muted">Kişisel Miks</span>
+                  </div>
+                </div>
+
+                <div class="mw-card">
+                  <div class="mw-card-art" style:background-color="#8338ec">
+                    <Icon name="now" size={15} />
+                  </div>
+                  <div class="mw-card-info">
+                    <span class="mw-ct truncate">Arşiv Mix'im</span>
+                    <span class="mw-ca truncate muted">Eski Parçalar</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mini PlayerBar reflecting playButtonShape and showRemainingTime -->
+          <div class="mw-playerbar">
+            <div class="mw-pb-track">
+              <div class="mw-pb-cover"></div>
+              <div class="mw-pb-meta">
+                <span class="mw-pbt truncate">Örnek Şarkı</span>
+                <span class="mw-pba truncate muted">Sanatçı</span>
+              </div>
+            </div>
+
+            <div class="mw-pb-center">
+              <div class="mw-pb-btns">
+                <span class="mw-ctrl-btn"><Icon name="prev" size={11} /></span>
+                <span
+                  class="mw-pb-play"
+                  class:squircle={theme.playButtonShape === 'squircle'}
+                  title={theme.playButtonShape === 'circle' ? 'Yuvarlak Oynatıcı' : 'Yumuşatılmış Kare Oynatıcı'}
+                >
+                  <Icon name="play" size={10} />
+                </span>
+                <span class="mw-ctrl-btn"><Icon name="next" size={11} /></span>
+              </div>
+              <div class="mw-pb-progress">
+                <span class="mw-time">01:24</span>
+                <div class="mw-slider"><div class="mw-slider-fill" style:width="42%"></div></div>
+                <span class="mw-time" class:rem-mode={theme.showRemainingTime}>
+                  {theme.showRemainingTime ? '-02:21' : '03:45'}
+                </span>
+              </div>
+            </div>
+
+            <div class="mw-pb-vol">
+              <span class="mw-speaker-icon"><Icon name="speaker" size={12} /></span>
+              <Icon name="volume" size={12} />
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Effect Inspector Badges -->
+        <div class="sim-inspector">
+          <span class="insp-title muted">Seçili Ayar Değerleri Özeti</span>
+          <div class="insp-badges">
+            <div class="insp-badge">
+              <span class="insp-dot" style:background-color={theme.accent}></span>
+              <span class="insp-k">Vurgu:</span>
+              <span class="insp-v">{theme.accent}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Tema Modu:</span>
+              <span class="insp-v">{theme.resolved.toUpperCase()}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">3B Dokunsal:</span>
+              <span class="insp-v">{theme.edgeDepth === 'none' ? '0px (Kapalı)' : theme.edgeDepth === 'subtle' ? '2px (İnce)' : theme.edgeDepth === 'normal' ? '4px (Standart)' : '6px (Belirgin)'}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Oynatıcı Butonu:</span>
+              <span class="insp-v">{theme.playButtonShape === 'circle' ? 'Yuvarlak Daire' : 'Yumuşatılmış Kare'}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Süre Çubuğu:</span>
+              <span class="insp-v">{theme.showRemainingTime ? 'Kalan Süre (-02:21)' : 'Toplam Süre (03:45)'}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Sol Menü:</span>
+              <span class="insp-v">{theme.sidebarCollapsed ? 'İkon Modu (74px)' : `${theme.sidebarWidth}px`}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Kart Boyutu:</span>
+              <span class="insp-v">{theme.cardSize === 'compact' ? 'Kompakt' : theme.cardSize === 'large' ? 'Geniş' : 'Standart'}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Başlık Yazıları:</span>
+              <span class="insp-v">{theme.hideSubtitles ? 'Gizli (Sade)' : 'Görünür'}</span>
+            </div>
+          </div>
+          <div class="sim-tip-box">
+            <span class="sim-tip-icon">💡</span>
+            <p class="sim-tip muted">
+              Sol taraftan yaptığın her seçim (renk, dokunsal kenar, buton stili, zoom, süre modu) anında bu simülasyonda ve uygulamada canlı olarak değişir.
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
 </section>
 
 <style>
@@ -548,8 +721,8 @@
     flex-direction: column;
     gap: 20px;
     width: 100%;
-    max-width: 1320px;
-    padding-bottom: 24px;
+    max-width: 1540px;
+    padding-bottom: 32px;
   }
   .head {
     display: flex;
@@ -568,6 +741,22 @@
     font-size: 26px;
     font-weight: 800;
   }
+
+  .settings-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(380px, 460px);
+    gap: 24px;
+    align-items: start;
+  }
+  .settings-controls-col {
+    min-width: 0;
+  }
+  .simulation-col {
+    position: sticky;
+    top: 16px;
+    min-width: 0;
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -837,12 +1026,442 @@
     flex-wrap: wrap;
   }
 
+  /* Right Sticky Simulation Card & Mockup */
+  .sim-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .sim-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sim-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sim-dot.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+    flex-shrink: 0;
+  }
+  .sim-title {
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .sim-sub {
+    font-size: 11.5px;
+  }
+
+  /* Mini Mockup Window */
+  .mini-window {
+    border-radius: calc(var(--radius) * 0.85);
+    border: 2px solid var(--border);
+    background: var(--bg);
+    box-shadow: 0 4px 0 var(--edge);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .mw-titlebar {
+    height: 28px;
+    background: var(--surface-2);
+    border-bottom: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+  }
+  .mw-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .mw-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .mw-dot.close {
+    background: #ff5f56;
+  }
+  .mw-dot.min {
+    background: #ffbd2e;
+  }
+  .mw-dot.max {
+    background: #27c93f;
+  }
+  .mw-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    opacity: 0.85;
+    max-width: 170px;
+  }
+  .mw-zoom-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--accent);
+  }
+
+  .mw-body {
+    display: flex;
+    height: 185px;
+    background: var(--bg);
+  }
+  .mw-sidebar {
+    width: 88px;
+    background: var(--surface);
+    border-right: 1.5px solid var(--border);
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: width 0.15s ease;
+  }
+  .mw-sidebar.collapsed {
+    width: 38px;
+    padding: 10px 4px;
+    align-items: center;
+  }
+  .mw-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    font-size: 10.5px;
+    color: var(--accent);
+  }
+  .mw-logo {
+    width: 17px;
+    height: 17px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .mw-brand-text {
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .mw-nav-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+  }
+  .mw-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .mw-nav-item.active {
+    background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
+    color: var(--text);
+    font-weight: 700;
+    border-left: 2px solid var(--accent);
+  }
+
+  .mw-content {
+    flex: 1;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    background: var(--bg);
+  }
+  .mw-content-head {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .mw-head-title {
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .mw-head-sub {
+    font-size: 9px;
+  }
+
+  .mw-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .mw-cards-grid[data-size='compact'] .mw-card-art {
+    height: 38px;
+  }
+  .mw-cards-grid[data-size='large'] .mw-card-art {
+    height: 56px;
+  }
+
+  .mw-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: calc(var(--radius) * 0.75);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .mw-card.active {
+    border-color: var(--accent);
+  }
+  .mw-card-art {
+    height: 46px;
+    border-radius: calc(var(--radius) * 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: #fff;
+    transition: height 0.12s ease;
+  }
+  .mw-card-play {
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    color: #000;
+    display: grid;
+    place-items: center;
+  }
+  .mw-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .mw-ct {
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .mw-ca {
+    font-size: 8.5px;
+  }
+
+  /* Mini Player Bar */
+  .mw-playerbar {
+    height: 44px;
+    background: var(--surface);
+    border-top: 2px solid var(--border);
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .mw-pb-track {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 80px;
+    min-width: 0;
+  }
+  .mw-pb-cover {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .mw-pb-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .mw-pbt {
+    font-size: 9px;
+    font-weight: 700;
+  }
+  .mw-pba {
+    font-size: 7.5px;
+  }
+  .mw-pb-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .mw-pb-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mw-ctrl-btn {
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+  }
+  .mw-pb-play {
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    box-shadow: 0 var(--edge-depth) 0 color-mix(in srgb, var(--accent) 60%, #000);
+    transition: border-radius 0.12s ease;
+  }
+  .mw-pb-play.squircle {
+    border-radius: 5px;
+  }
+  .mw-pb-progress {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    max-width: 150px;
+  }
+  .mw-time {
+    font-size: 8px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .mw-time.rem-mode {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .mw-slider {
+    flex: 1;
+    height: 3px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .mw-slider-fill {
+    height: 100%;
+    background: var(--accent);
+  }
+  .mw-pb-vol {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+  }
+  .mw-speaker-icon {
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+  }
+
+  /* Inspector Badges */
+  .sim-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1.5px solid var(--border);
+  }
+  .insp-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .insp-badges {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .insp-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 7px;
+    font-size: 10.5px;
+    min-width: 0;
+  }
+  .insp-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .insp-k {
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .insp-v {
+    color: var(--text);
+    font-weight: 700;
+    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sim-tip-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    background: color-mix(in srgb, var(--accent) 9%, var(--surface-2));
+    border: 1.5px dashed var(--accent);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 2px;
+  }
+  .sim-tip-icon {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  .sim-tip {
+    font-size: 11px;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  @media (max-width: 1200px) {
+    .settings-layout {
+      grid-template-columns: 1fr;
+    }
+    .simulation-col {
+      position: static;
+    }
+  }
+
   @media (max-width: 860px) {
     .grid {
       grid-template-columns: 1fr;
     }
     .span-2 {
       grid-column: span 1;
+    }
+    .insp-badges {
+      grid-template-columns: 1fr;
     }
   }
 </style>
