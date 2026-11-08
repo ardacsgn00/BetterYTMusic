@@ -43,13 +43,14 @@
     align-items: center;
     justify-content: center;
     gap: 22px;
-    padding: 28px;
+    padding: 24px;
     min-height: 0;
     min-width: 0;
+    container-type: inline-size;
   }
   .cover-wrap {
-    /* Scales with both width and height so it never overflows short windows. */
-    width: min(100%, 52vh, 460px);
+    /* Scales smoothly with both panel width (when resized via splitter) and window height. */
+    width: min(88cqi, 52vh, 500px);
     border-radius: var(--radius-lg);
     box-shadow: 0 var(--edge-depth) 0 var(--edge);
   }

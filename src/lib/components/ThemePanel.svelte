@@ -150,10 +150,38 @@
     </div>
 
     <div class="card block">
-      <h2>Yazı Boyutu & Liste Yoğunluğu</h2>
-      <p class="muted">Okunabilirlik ölçeğini ve şarkı listesi aralığını ayarla.</p>
+      <h2>Sayfa Ölçeği (Zoom) & Liste Yoğunluğu</h2>
+      <p class="muted">Sayfa görünürlük oranını (%75–%135), metin boyutunu ve panel genişliklerini yönet.</p>
       <div class="sub-group">
-        <span class="sub-label muted">Metin Ölçeği</span>
+        <span class="sub-label muted">Sayfa Görünürlük Oranı (%{theme.zoom})</span>
+        <div class="opt-row">
+          <button
+            class="btn"
+            disabled={theme.zoom <= 75}
+            onclick={() => theme.stepZoom(-5)}
+          >
+            − %5
+          </button>
+          {#each [80, 90, 100, 110, 125] as z (z)}
+            <button
+              class="btn"
+              class:accent={theme.zoom === z}
+              onclick={() => theme.setZoom(z)}
+            >
+              %{z}
+            </button>
+          {/each}
+          <button
+            class="btn"
+            disabled={theme.zoom >= 135}
+            onclick={() => theme.stepZoom(5)}
+          >
+            + %5
+          </button>
+        </div>
+      </div>
+      <div class="sub-group">
+        <span class="sub-label muted">Metin Ölçeği & Liste Görünümü</span>
         <div class="opt-row">
           {#each fontScales as s (s.id)}
             <button
@@ -164,11 +192,6 @@
               {s.label}
             </button>
           {/each}
-        </div>
-      </div>
-      <div class="sub-group">
-        <span class="sub-label muted">Liste Görünümü</span>
-        <div class="opt-row">
           {#each densities as d (d.id)}
             <button
               class="btn"
@@ -178,6 +201,15 @@
               {d.label}
             </button>
           {/each}
+        </div>
+      </div>
+      <div class="sub-group">
+        <span class="sub-label muted">Dinle Ekranı Panel Genişlikleri</span>
+        <div class="opt-row">
+          <button class="btn" onclick={() => theme.resetSplits()}>
+            <Icon name="refresh" size={15} />
+            Panel Genişliklerini Varsayılana Sıfırla
+          </button>
         </div>
       </div>
     </div>
@@ -305,9 +337,10 @@
 
         <div class="about-item">
           <span class="sub-label muted">Kaynak Kod & Proje Sayfası</span>
+          <span class="about-val truncate">ardacsgn00/betterytmusic</span>
           <button class="btn github-btn" onclick={() => player.openUrl(GITHUB_URL)}>
-            <Icon name="github" size={17} />
-            github.com/ardacsgn00/betterytmusic
+            <Icon name="github" size={16} />
+            GitHub'da Aç
           </button>
         </div>
       </div>
@@ -585,18 +618,24 @@
     border-radius: var(--radius);
     background: var(--surface-2);
     border: 2px solid var(--border);
+    min-width: 0;
+    overflow: hidden;
   }
   .about-val {
-    font-size: 16px;
+    font-size: 15.5px;
     font-weight: 800;
+    max-width: 100%;
   }
   .about-sub {
     font-size: 12px;
   }
   .github-btn {
     margin-top: 2px;
+    min-height: 32px;
+    padding: 0 12px;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 12.5px;
+    max-width: 100%;
   }
   .update-bar {
     display: flex;

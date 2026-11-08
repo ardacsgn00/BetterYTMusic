@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { player } from '#lib/player.svelte.ts';
   import { library } from '#lib/library.svelte.ts';
+  import { theme } from '#lib/theme.svelte.ts';
   import { formatTime } from '#lib/format.ts';
   import type { PlaylistCard, Track } from '#lib/types.ts';
   import Cover from './Cover.svelte';
@@ -193,6 +194,35 @@
         <p class="muted">Sana özel seçimler, kişisel mixlerin ve güncel parçalar</p>
       </div>
       <div class="head-actions">
+        <div class="zoom-ctrl" title="Sayfa görünürlük oranı (Ctrl + / Ctrl - / Ctrl 0)">
+          <button
+            type="button"
+            class="btn zoom-step"
+            disabled={theme.zoom <= 75}
+            aria-label="Küçült"
+            onclick={() => theme.stepZoom(-5)}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            class="btn zoom-val"
+            title="%100 ölçeğine sıfırla"
+            onclick={() => theme.setZoom(100)}
+          >
+            %{theme.zoom}
+          </button>
+          <button
+            type="button"
+            class="btn zoom-step"
+            disabled={theme.zoom >= 135}
+            aria-label="Büyüt"
+            onclick={() => theme.stepZoom(5)}
+          >
+            +
+          </button>
+        </div>
+
         {#if tracks.length > 0}
           <button class="btn accent" onclick={playShuffled}>
             <Icon name="shuffle" size={17} />
@@ -408,6 +438,38 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
+  }
+  .zoom-ctrl {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 2px solid var(--border);
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .zoom-step {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    font-weight: 800;
+    font-size: 16px;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+  }
+  .zoom-val {
+    height: 32px;
+    min-height: 32px;
+    min-width: 54px;
+    padding: 0 8px;
+    font-weight: 800;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
   }
   h1 {
     font-size: 26px;

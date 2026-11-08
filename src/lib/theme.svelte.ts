@@ -94,6 +94,13 @@ class ThemeStore {
   edgeDepth = $state<EdgeDepth>('normal');
   density = $state<Density>('comfortable');
   appName = $state<string>('BetterYTMusic');
+  /** Page zoom percentage (75% – 135%, like Chrome zoom). */
+  zoom = $state<number>(100);
+  /** 2-col Dinle view: left panel width % (30 – 70). */
+  split2Left = $state<number>(52);
+  /** 3-col Dinle view: left panel width % (22 – 46) and right panel width % (22 – 46). */
+  split3Left = $state<number>(32);
+  split3Right = $state<number>(32);
 
   #media: MediaQueryList | null = null;
 
@@ -109,6 +116,18 @@ class ThemeStore {
       if (saved.density) this.density = saved.density;
       if (typeof saved.appName === 'string' && saved.appName.trim()) {
         this.appName = saved.appName;
+      }
+      if (typeof saved.zoom === 'number') {
+        this.zoom = Math.max(75, Math.min(135, Math.round(saved.zoom)));
+      }
+      if (typeof saved.split2Left === 'number') {
+        this.split2Left = Math.max(30, Math.min(70, saved.split2Left));
+      }
+      if (typeof saved.split3Left === 'number') {
+        this.split3Left = Math.max(22, Math.min(46, saved.split3Left));
+      }
+      if (typeof saved.split3Right === 'number') {
+        this.split3Right = Math.max(22, Math.min(46, saved.split3Right));
       }
     } catch {
       /* ignore corrupt storage */
@@ -163,6 +182,39 @@ class ThemeStore {
     this.#apply();
   }
 
+  setZoom(zoom: number) {
+    this.zoom = Math.max(75, Math.min(135, Math.round(zoom)));
+    this.#apply();
+  }
+
+  stepZoom(delta: number) {
+    this.setZoom(this.zoom + delta);
+  }
+
+  setSplit2Left(pct: number) {
+    this.split2Left = Math.max(30, Math.min(70, Math.round(pct * 10) / 10));
+    this.#apply();
+  }
+
+  setSplit3Left(pct: number) {
+    const maxLeft = Math.min(46, 76 - this.split3Right);
+    this.split3Left = Math.max(22, Math.min(maxLeft, Math.round(pct * 10) / 10));
+    this.#apply();
+  }
+
+  setSplit3Right(pct: number) {
+    const maxRight = Math.min(46, 76 - this.split3Left);
+    this.split3Right = Math.max(22, Math.min(maxRight, Math.round(pct * 10) / 10));
+    this.#apply();
+  }
+
+  resetSplits() {
+    this.split2Left = 52;
+    this.split3Left = 32;
+    this.split3Right = 32;
+    this.#apply();
+  }
+
   reset() {
     this.mode = 'dark';
     this.accent = ACCENT_PRESETS[0].value;
@@ -172,6 +224,10 @@ class ThemeStore {
     this.edgeDepth = 'normal';
     this.density = 'comfortable';
     this.appName = 'BetterYTMusic';
+    this.zoom = 100;
+    this.split2Left = 52;
+    this.split3Left = 32;
+    this.split3Right = 32;
     this.#apply();
   }
 
@@ -193,6 +249,7 @@ class ThemeStore {
     root.style.setProperty('--radius-lg', r.lg);
 
     root.style.setProperty('--edge-depth', EDGE_MAP[this.edgeDepth] ?? '4px');
+    root.style.setProperty('--page-zoom', `${this.zoom}%`);
 
     localStorage.setItem(
       STORAGE_KEY,
@@ -204,7 +261,11 @@ class ThemeStore {
         radius: this.radius,
         edgeDepth: this.edgeDepth,
         density: this.density,
-        appName: this.appName
+        appName: this.appName,
+        zoom: this.zoom,
+        split2Left: this.split2Left,
+        split3Left: this.split3Left,
+        split3Right: this.split3Right
       })
     );
   }
