@@ -10,6 +10,8 @@
   import HomeView from '#lib/components/HomeView.svelte';
   import LibraryView from '#lib/components/LibraryView.svelte';
   import OnboardingModal from '#lib/components/OnboardingModal.svelte';
+  import MiniPlayer from '#lib/components/MiniPlayer.svelte';
+  import { mini } from '#lib/mini.svelte.ts';
   import { player } from '#lib/player.svelte.ts';
   import { theme } from '#lib/theme.svelte.ts';
   import type { View } from '#lib/types.ts';
@@ -117,6 +119,9 @@
 
 <svelte:window onkeydown={onKeydown} onwheel={{ handleEvent: onWheel, passive: false } as any} />
 
+{#if mini.active}
+  <MiniPlayer />
+{:else}
 <div class="shell" class:is-resizing={draggingHandle !== null}>
   <Sidebar active={view} onselect={selectView} />
 
@@ -203,6 +208,7 @@
     <OnboardingModal />
   {/if}
 </div>
+{/if}
 
 <style>
   .shell {

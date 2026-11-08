@@ -6,6 +6,7 @@
   import Cover from './Cover.svelte';
   import Icon from './Icon.svelte';
   import Slider from './Slider.svelte';
+  import { mini } from '#lib/mini.svelte.ts';
 
   const s = $derived(player.state);
   const liked = $derived(library.isFavorite(s.track?.id));
@@ -129,6 +130,16 @@
   </div>
 
   <div class="volume">
+    <button
+      type="button"
+      class="btn ghost icon"
+      title="Mini Oynatıcı"
+      aria-label="Mini oynatıcıya geç"
+      onclick={mini.enter}
+    >
+      <Icon name="mini" size={20} />
+    </button>
+
     <div class="dev-pop-wrap">
       <button
         type="button"

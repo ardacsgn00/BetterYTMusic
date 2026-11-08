@@ -1,6 +1,7 @@
 mod commands;
 mod innertube;
 mod media;
+mod miniwin;
 mod mock;
 mod player;
 mod settings;
@@ -34,6 +35,7 @@ pub fn run() {
             }
             app.manage(yt.clone());
             app.manage(settings.clone());
+            app.manage(miniwin::MiniState::default());
 
             app.manage(PlayerController::new(yt.clone(), Vec::new()));
 
@@ -113,6 +115,11 @@ pub fn run() {
             commands::settings_update,
             commands::app_check_update,
             commands::app_open_url,
+            miniwin::window_enter_mini,
+            miniwin::window_exit_mini,
+            miniwin::window_set_mini_layout,
+            miniwin::window_set_always_on_top,
+            miniwin::window_start_drag,
         ])
         .run(tauri::generate_context!())
         .expect("error while running BetterYTMusic");

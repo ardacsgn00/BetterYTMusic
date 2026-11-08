@@ -19,6 +19,7 @@ export type Density = 'compact' | 'comfortable';
 export type PlayButtonShape = 'circle' | 'squircle';
 export type CardSize = 'compact' | 'normal' | 'large';
 export type StartupView = 'last' | 'home' | 'now' | 'library' | 'search';
+export type MiniLayout = 'strip' | 'square';
 
 export const DEFAULT_NAV_ORDER: View[] = ['now', 'home', 'search', 'library', 'theme'];
 
@@ -164,6 +165,10 @@ class ThemeStore {
   cardSize = $state<CardSize>('normal');
   /** Hide helper subtitles under page and section headers for a cleaner look. */
   hideSubtitles = $state<boolean>(false);
+  /** Mini player layout ('strip' = horizontal bar, 'square' = cover card). */
+  miniLayout = $state<MiniLayout>('strip');
+  /** Mini player window position (physical px), remembered between sessions. */
+  miniPos = $state<{ x: number; y: number } | null>(null);
 
   #media: MediaQueryList | null = null;
 
@@ -234,6 +239,12 @@ class ThemeStore {
       }
       if (typeof saved.hideSubtitles === 'boolean') {
         this.hideSubtitles = saved.hideSubtitles;
+      }
+      if (saved.miniLayout === 'strip' || saved.miniLayout === 'square') {
+        this.miniLayout = saved.miniLayout;
+      }
+      if (saved.miniPos && typeof saved.miniPos.x === 'number' && typeof saved.miniPos.y === 'number') {
+        this.miniPos = { x: saved.miniPos.x, y: saved.miniPos.y };
       }
     } catch {
       /* ignore corrupt storage */
@@ -384,6 +395,16 @@ class ThemeStore {
     this.#apply();
   }
 
+  setMiniLayout(layout: MiniLayout) {
+    this.miniLayout = layout;
+    this.#apply();
+  }
+
+  setMiniPos(pos: { x: number; y: number } | null) {
+    this.miniPos = pos;
+    this.#apply();
+  }
+
   resetSidebarNavOrder() {
     this.sidebarNavOrder = [...DEFAULT_NAV_ORDER];
     this.#apply();
@@ -417,6 +438,7 @@ class ThemeStore {
     this.startupView = 'last';
     this.cardSize = 'normal';
     this.hideSubtitles = false;
+    this.miniLayout = 'strip';
     this.#apply();
   }
 
@@ -465,7 +487,9 @@ class ThemeStore {
         startupView: this.startupView,
         lastView: this.lastView,
         cardSize: this.cardSize,
-        hideSubtitles: this.hideSubtitles
+        hideSubtitles: this.hideSubtitles,
+        miniLayout: this.miniLayout,
+        miniPos: this.miniPos
       })
     );
   }

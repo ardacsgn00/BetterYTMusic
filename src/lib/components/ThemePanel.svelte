@@ -12,6 +12,7 @@
     type StartupView
   } from '#lib/theme.svelte.ts';
   import { player } from '#lib/player.svelte.ts';
+  import { mini } from '#lib/mini.svelte.ts';
   import type { UpdateCheckResult, View } from '#lib/types.ts';
   import Icon, { type IconName } from './Icon.svelte';
 
@@ -450,6 +451,39 @@
       </div>
 
       <div class="sub-group">
+        <span class="sub-label muted">Mini Oynatıcı Düzeni</span>
+        <p class="sub-desc muted">Alt bardaki mini oynatıcı düğmesiyle pencere küçülür ve her zaman üstte kalır. Görünümünü buradan seç.</p>
+        <div class="mini-layout-row">
+          <button
+            class="btn mini-layout-btn"
+            class:accent={theme.miniLayout === 'strip'}
+            onclick={() => mini.setLayout('strip')}
+          >
+            <span class="ml-preview ml-strip" aria-hidden="true">
+              <span class="ml-cover"></span>
+              <span class="ml-lines"><span></span><span></span></span>
+              <span class="ml-dot"></span>
+            </span>
+            <span class="ml-label">Yatay Şerit</span>
+          </button>
+          <button
+            class="btn mini-layout-btn"
+            class:accent={theme.miniLayout === 'square'}
+            onclick={() => mini.setLayout('square')}
+          >
+            <span class="ml-preview ml-square" aria-hidden="true">
+              <span class="ml-panel"><span class="ml-dot"></span></span>
+            </span>
+            <span class="ml-label">Kare Kart</span>
+          </button>
+          <button class="btn mini-try-btn" onclick={mini.enter}>
+            <Icon name="mini" size={16} />
+            Şimdi Dene
+          </button>
+        </div>
+      </div>
+
+      <div class="sub-group">
         <span class="sub-label muted">Uygulama Başlığı</span>
         <div class="name-row">
           <input
@@ -768,6 +802,10 @@
             <div class="insp-badge">
               <span class="insp-k">Başlık Yazıları:</span>
               <span class="insp-v">{theme.hideSubtitles ? 'Gizli (Sade)' : 'Görünür'}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Mini Oynatıcı:</span>
+              <span class="insp-v">{theme.miniLayout === 'square' ? 'Kare Kart' : 'Yatay Şerit'}</span>
             </div>
           </div>
           <div class="sim-tip-box">
@@ -1587,6 +1625,86 @@
     font-size: 11px;
     line-height: 1.4;
     margin: 0;
+  }
+
+  .mini-layout-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .mini-layout-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    min-height: 48px;
+  }
+  .ml-preview {
+    width: 32px;
+    height: 22px;
+    border-radius: 4px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .ml-strip {
+    padding: 2px 4px;
+    gap: 3px;
+  }
+  .ml-cover {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .ml-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ml-lines span {
+    height: 2px;
+    border-radius: 1px;
+    background: var(--text-muted);
+    width: 100%;
+  }
+  .ml-lines span:last-child {
+    width: 60%;
+  }
+  .ml-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .ml-square {
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    display: flex;
+    align-items: flex-end;
+    background: var(--surface-3);
+  }
+  .ml-panel {
+    width: 100%;
+    height: 10px;
+    background: color-mix(in srgb, var(--surface) 80%, #000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mini-try-btn {
+    margin-left: auto;
+    font-weight: 700;
   }
 
   @media (max-width: 1200px) {
