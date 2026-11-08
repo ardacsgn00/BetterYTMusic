@@ -20,8 +20,11 @@ const EMPTY: PlayerSnapshot = {
   volume: 0.8,
   repeat: 'off',
   shuffle: false,
-  sourceName: null
+  sourceName: null,
+  outputDevice: null
 };
+
+const OUTPUT_DEVICE_KEY = 'bytm.outputDevice';
 
 /**
  * Frontend mirror of the Rust player.
@@ -42,6 +45,7 @@ class PlayerStore {
   lyrics = $state<LyricsData | null>(null);
   lyricsLoading = $state(false);
   lyricsTrackId = $state<string | null>(null);
+  outputDevices = $state<string[]>([]);
 
   #lyricsCache = new Map<string, LyricsData | null>();
   #syncedAt = 0;
@@ -61,6 +65,15 @@ class PlayerStore {
       this.settings = await invoke<AppSettings>('settings_get');
     } catch {
       /* ignore if unavailable */
+    }
+    try {
+      await this.refreshOutputDevices();
+      const savedDev = localStorage.getItem(OUTPUT_DEVICE_KEY);
+      if (savedDev && savedDev.trim()) {
+        await this.setOutputDevice(savedDev);
+      }
+    } catch {
+      /* ignore audio device init errors */
     }
   }
 
@@ -142,6 +155,27 @@ class PlayerStore {
       source: source ?? null
     });
   setVolume = (volume: number) => invoke('player_set_volume', { volume });
+  refreshOutputDevices = async () => {
+    try {
+      this.outputDevices = await invoke<string[]>('player_list_output_devices');
+    } catch {
+      this.outputDevices = [];
+    }
+    return this.outputDevices;
+  };
+  setOutputDevice = async (device: string | null) => {
+    const clean = device && device.trim() ? device.trim() : null;
+    try {
+      if (clean) {
+        localStorage.setItem(OUTPUT_DEVICE_KEY, clean);
+      } else {
+        localStorage.removeItem(OUTPUT_DEVICE_KEY);
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+    await invoke('player_set_output_device', { device: clean });
+  };
   search = (query: string) => invoke<Track[]>('yt_search', { query });
   home = () => invoke<Track[]>('yt_home');
   homePlaylists = () => invoke<PlaylistCard[]>('yt_home_playlists');

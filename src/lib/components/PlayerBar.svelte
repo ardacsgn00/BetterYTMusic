@@ -18,6 +18,8 @@
 
   // Remember volume before muting so unmute restores it.
   let lastVolume = 0.8;
+  let deviceMenuOpen = $state(false);
+
   function toggleMute() {
     if (s.volume > 0) {
       lastVolume = s.volume;
@@ -27,11 +29,26 @@
     }
   }
 
+  async function toggleDeviceMenu(e: MouseEvent) {
+    e.stopPropagation();
+    deviceMenuOpen = !deviceMenuOpen;
+    if (deviceMenuOpen) {
+      await player.refreshOutputDevices();
+    }
+  }
+
+  async function selectDevice(dev: string | null) {
+    await player.setOutputDevice(dev);
+    deviceMenuOpen = false;
+  }
+
   const volumeIcon = $derived(s.volume === 0 ? 'mute' : s.volume < 0.5 ? 'volume-low' : 'volume');
   const repeatLabel = $derived(
     s.repeat === 'one' ? 'Tekrar: tek şarkı' : s.repeat === 'all' ? 'Tekrar: tüm kuyruk' : 'Tekrar: kapalı'
   );
 </script>
+
+<svelte:window onclick={() => (deviceMenuOpen = false)} />
 
 <footer class="bar">
   <div class="info">
@@ -112,6 +129,58 @@
   </div>
 
   <div class="volume">
+    <div class="dev-pop-wrap">
+      <button
+        type="button"
+        class="btn ghost icon"
+        class:on={deviceMenuOpen || s.outputDevice !== null}
+        title={s.outputDevice ? `Ses Çıkışı: ${s.outputDevice}` : 'Ses Çıkış Cihazı Seç (Sistem Varsayılanı)'}
+        aria-label="Ses çıkış cihazı seç"
+        aria-expanded={deviceMenuOpen}
+        onclick={toggleDeviceMenu}
+      >
+        <Icon name="speaker" size={20} />
+      </button>
+
+      {#if deviceMenuOpen}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="card device-popover" onclick={(e) => e.stopPropagation()}>
+          <div class="dev-head">
+            <span class="dev-title muted">Ses Çıkış Cihazı</span>
+          </div>
+          <div class="dev-list">
+            <button
+              type="button"
+              class="dev-item"
+              class:active={!s.outputDevice}
+              onclick={() => selectDevice(null)}
+            >
+              <span class="dev-name truncate">Sistem Varsayılanı</span>
+              {#if !s.outputDevice}
+                <Icon name="check" size={16} />
+              {/if}
+            </button>
+
+            {#each player.outputDevices as dev (dev)}
+              {@const selected = s.outputDevice === dev}
+              <button
+                type="button"
+                class="dev-item"
+                class:active={selected}
+                onclick={() => selectDevice(dev)}
+              >
+                <span class="dev-name truncate">{dev}</span>
+                {#if selected}
+                  <Icon name="check" size={16} />
+                {/if}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </div>
+
     <button class="btn ghost icon" title="Sessiz" aria-label="Sessiz" onclick={toggleMute}>
       <Icon name={volumeIcon} size={20} />
     </button>
@@ -214,6 +283,69 @@
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
+  }
+  .dev-pop-wrap {
+    position: relative;
+  }
+  .device-popover {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    right: 0;
+    z-index: 60;
+    width: 280px;
+    max-width: calc(100vw - 32px);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .dev-head {
+    padding: 2px 6px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dev-title {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .dev-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .dev-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+  .dev-item:hover {
+    background: var(--surface-2);
+  }
+  .dev-item.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .dev-name {
+    min-width: 0;
+    flex: 1;
   }
   .vol-slider {
     width: min(140px, 100%);

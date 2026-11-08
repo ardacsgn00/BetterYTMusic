@@ -13,19 +13,20 @@ mod imp {
 
     use tauri::{AppHandle, Manager};
     use windows::core::w;
-    use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+    use windows::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError, HWND, LPARAM, LRESULT, WPARAM};
     use windows::Win32::Graphics::Gdi::{
         CreateBitmap, CreateDIBSection, DeleteObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
         DIB_RGB_COLORS, HBITMAP, HDC,
     };
     use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
+    use windows::Win32::System::Threading::CreateMutexW;
     use windows::Win32::UI::Shell::{
         DefSubclassProc, ITaskbarList3, SetWindowSubclass, TaskbarList, THBF_ENABLED, THB_FLAGS,
         THB_ICON, THB_TOOLTIP, THBN_CLICKED, THUMBBUTTON,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
-        CreateIconIndirect, PostMessageW, RegisterWindowMessageW, HICON, ICONINFO, WM_APP,
-        WM_COMMAND,
+        CreateIconIndirect, PostMessageW, RegisterWindowMessageW, HICON, HWND_BROADCAST, ICONINFO,
+        WM_APP, WM_COMMAND,
     };
 
     use crate::player::PlayerController;
@@ -37,6 +38,33 @@ mod imp {
     const WM_TASKBAR_SYNC: u32 = WM_APP + 77;
     const SUBCLASS_ID: usize = 0xB77E_2026;
 
+    /// Ensures WebView2 stores its user data inside `%LOCALAPPDATA%\com.betterytmusic.app\EBWebView`
+    /// (never creating a `.exe.WebView2` folder next to the executable on Desktop/Downloads)
+    /// and prevents multiple instances from opening when the `.exe` is clicked repeatedly.
+    pub fn acquire_single_instance() -> bool {
+        if std::env::var_os("WEBVIEW2_USER_DATA_FOLDER").is_none() {
+            if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+                let wv_dir = std::path::PathBuf::from(local_app_data)
+                    .join("com.betterytmusic.app")
+                    .join("EBWebView");
+                let _ = std::fs::create_dir_all(&wv_dir);
+                std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", &wv_dir);
+            }
+        }
+
+        unsafe {
+            let _ = CreateMutexW(None, false, w!("Local\\BetterYTMusic_SingleInstance_Mutex_v1"));
+            if GetLastError() == ERROR_ALREADY_EXISTS {
+                let msg_show = RegisterWindowMessageW(w!("BetterYTMusic_ShowMainWindow"));
+                if msg_show != 0 {
+                    let _ = PostMessageW(Some(HWND_BROADCAST), msg_show, WPARAM(0), LPARAM(0));
+                }
+                return false;
+            }
+        }
+        true
+    }
+
     struct TaskbarContext {
         app: AppHandle,
         taskbar: Option<ITaskbarList3>,
@@ -45,6 +73,7 @@ mod imp {
         icon_pause: HICON,
         icon_next: HICON,
         msg_btn_created: u32,
+        msg_show_main: u32,
         added: bool,
         playing: bool,
     }
@@ -74,6 +103,7 @@ mod imp {
 
         unsafe {
             let msg_btn_created = RegisterWindowMessageW(w!("TaskbarButtonCreated"));
+            let msg_show_main = RegisterWindowMessageW(w!("BetterYTMusic_ShowMainWindow"));
             let taskbar: Option<ITaskbarList3> =
                 CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER).ok();
             if let Some(tb) = &taskbar {
@@ -88,6 +118,7 @@ mod imp {
                 icon_pause: create_transport_icon(IconKind::Pause),
                 icon_next: create_transport_icon(IconKind::Next),
                 msg_btn_created,
+                msg_show_main,
                 added: false,
                 playing: false,
             });
@@ -159,6 +190,9 @@ mod imp {
             if msg != 0 && msg == ctx.msg_btn_created {
                 ctx.added = false;
                 ensure_buttons(hwnd, ctx);
+            } else if msg != 0 && msg == ctx.msg_show_main {
+                crate::tray::show_main_window(&ctx.app);
+                return LRESULT(0);
             } else if msg == WM_TASKBAR_SYNC {
                 let new_playing = wparam.0 != 0;
                 if !ctx.added || ctx.playing != new_playing {
@@ -281,7 +315,12 @@ mod imp {
 }
 
 #[cfg(target_os = "windows")]
-pub use imp::{init, TaskbarHandle};
+pub use imp::{acquire_single_instance, init, TaskbarHandle};
+
+#[cfg(not(target_os = "windows"))]
+pub fn acquire_single_instance() -> bool {
+    true
+}
 
 #[cfg(not(target_os = "windows"))]
 #[derive(Clone, Copy)]

@@ -42,6 +42,7 @@ pub struct PlayerSnapshot {
     pub repeat: RepeatMode,
     pub shuffle: bool,
     pub source_name: Option<String>,
+    pub output_device: Option<String>,
 }
 
 pub struct Player {
@@ -52,6 +53,7 @@ pub struct Player {
     repeat: RepeatMode,
     shuffle: bool,
     source_name: Option<String>,
+    output_device: Option<String>,
 }
 
 impl Player {
@@ -64,6 +66,7 @@ impl Player {
             repeat: RepeatMode::Off,
             shuffle: false,
             source_name: None,
+            output_device: None,
         };
         p.engine.set_volume(p.volume);
         if !p.queue.is_empty() {
@@ -179,6 +182,14 @@ impl Player {
         self.engine.set_volume(self.volume);
     }
 
+    pub fn set_output_device(&mut self, device: Option<String>) {
+        let clean = device
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+        self.output_device = clean.clone();
+        self.engine.set_output_device(clean);
+    }
+
     pub fn cycle_repeat(&mut self) {
         self.repeat = match self.repeat {
             RepeatMode::Off => RepeatMode::All,
@@ -241,6 +252,7 @@ impl Player {
             repeat: self.repeat,
             shuffle: self.shuffle,
             source_name: self.source_name.clone(),
+            output_device: self.output_device.clone(),
         }
     }
 }

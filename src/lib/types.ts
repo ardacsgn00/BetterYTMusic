@@ -63,4 +63,5 @@ export interface PlayerSnapshot {
   repeat: RepeatMode;
   shuffle: boolean;
   sourceName: string | null;
+  outputDevice: string | null;
 }

@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use rodio::cpal::traits::{DeviceTrait, HostTrait};
 use rodio::{OutputStream, Sink, Source};
 use symphonia::core::audio::{SampleBuffer, SignalSpec};
 use symphonia::core::codecs::{Decoder as SymDecoder, DecoderOptions, CODEC_TYPE_NULL};
@@ -20,6 +21,39 @@ use symphonia::core::probe::Hint;
 use crate::innertube::Innertube;
 use crate::mock::Track;
 
+/// Enumerate all available audio output device names on the host OS.
+pub fn list_output_devices() -> Vec<String> {
+    let host = rodio::cpal::default_host();
+    let mut out = Vec::new();
+    if let Ok(devices) = host.output_devices() {
+        for dev in devices {
+            if let Ok(name) = dev.name() {
+                let trimmed = name.trim().to_string();
+                if !trimmed.is_empty() && !out.contains(&trimmed) {
+                    out.push(trimmed);
+                }
+            }
+        }
+    }
+    out
+}
+
+fn open_output_stream(
+    device_name: Option<&str>,
+) -> Option<(OutputStream, rodio::OutputStreamHandle)> {
+    if let Some(target) = device_name.map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        let host = rodio::cpal::default_host();
+        if let Ok(mut devices) = host.output_devices() {
+            if let Some(dev) = devices.find(|d| d.name().ok().as_deref().map(str::trim) == Some(target)) {
+                if let Ok(pair) = OutputStream::try_from_device(&dev) {
+                    return Some(pair);
+                }
+            }
+        }
+    }
+    OutputStream::try_default().ok()
+}
+
 /// Abstraction over the audio backend.
 pub trait AudioEngine: Send {
     fn load(&mut self, track: &Track);
@@ -27,6 +61,7 @@ pub trait AudioEngine: Send {
     fn pause(&mut self);
     fn seek(&mut self, position_ms: u64);
     fn set_volume(&mut self, volume: f32);
+    fn set_output_device(&mut self, device_name: Option<String>);
     fn is_playing(&self) -> bool;
     fn position_ms(&self) -> u64;
     fn duration_ms(&self) -> u64;
@@ -39,6 +74,7 @@ enum EngineCmd {
     Pause,
     Seek(u64),
     SetVolume(f32),
+    SetOutputDevice(Option<String>),
 }
 
 struct SharedClock {
@@ -398,6 +434,10 @@ impl AudioEngine for RodioEngine {
         let _ = self.tx.send(EngineCmd::SetVolume(volume));
     }
 
+    fn set_output_device(&mut self, device_name: Option<String>) {
+        let _ = self.tx.send(EngineCmd::SetOutputDevice(device_name));
+    }
+
     fn is_playing(&self) -> bool {
         self.clock.playing.load(Ordering::Relaxed)
     }
@@ -428,7 +468,7 @@ fn run_worker(
     load_seq: Arc<AtomicU64>,
     innertube: Arc<Innertube>,
 ) {
-    let stream_pair = OutputStream::try_default().ok();
+    let mut stream_pair = open_output_stream(None);
     let mut sink: Option<Sink> = stream_pair
         .as_ref()
         .and_then(|(_, handle)| Sink::try_new(handle).ok());
@@ -572,6 +612,82 @@ fn run_worker(
                     volume = v;
                     if let Some(s) = &sink {
                         s.set_volume(volume);
+                    }
+                }
+                EngineCmd::SetOutputDevice(dev_name) => {
+                    let pos_ms = clock.position_ms();
+                    let dur = clock.duration_ms.load(Ordering::Relaxed);
+                    let clamped_ms = if dur > 600 {
+                        pos_ms.min(dur - 500)
+                    } else {
+                        pos_ms
+                    };
+                    if let Some(old_sink) = sink.take() {
+                        old_sink.stop();
+                    }
+                    drop(stream_pair.take());
+                    stream_pair = open_output_stream(dev_name.as_deref());
+                    if let Some((_, handle)) = &stream_pair {
+                        if let Ok(new_sink) = Sink::try_new(handle) {
+                            new_sink.set_volume(volume);
+                            if let Some(bytes) = &current_bytes {
+                                if clock.has_audio.load(Ordering::Relaxed) {
+                                    let target = Duration::from_millis(clamped_ms);
+                                    if let Ok(dec) = SymphoniaSource::new_at(bytes.clone(), target) {
+                                        new_sink.append(dec);
+                                        clock.base_ms.store(clamped_ms, Ordering::Relaxed);
+                                        clock.finished.store(false, Ordering::Relaxed);
+                                        if desired_playing {
+                                            let now = clock.now_ms().max(1);
+                                            clock.started_epoch_ms.store(now, Ordering::Relaxed);
+                                            new_sink.play();
+                                        } else {
+                                            clock.started_epoch_ms.store(0, Ordering::Relaxed);
+                                            new_sink.pause();
+                                        }
+                                    }
+                                }
+                            }
+                            sink = Some(new_sink);
+                        }
+                    }
+                }
+                EngineCmd::SetOutputDevice(dev_name) => {
+                    let pos_ms = clock.position_ms();
+                    let dur = clock.duration_ms.load(Ordering::Relaxed);
+                    let clamped_ms = if dur > 600 {
+                        pos_ms.min(dur - 500)
+                    } else {
+                        pos_ms
+                    };
+                    if let Some(old_sink) = sink.take() {
+                        old_sink.stop();
+                    }
+                    drop(stream_pair.take());
+                    stream_pair = open_output_stream(dev_name.as_deref());
+                    if let Some((_, handle)) = &stream_pair {
+                        if let Ok(new_sink) = Sink::try_new(handle) {
+                            new_sink.set_volume(volume);
+                            if let Some(bytes) = &current_bytes {
+                                if clock.has_audio.load(Ordering::Relaxed) {
+                                    let target = Duration::from_millis(clamped_ms);
+                                    if let Ok(dec) = SymphoniaSource::new_at(bytes.clone(), target) {
+                                        new_sink.append(dec);
+                                        clock.base_ms.store(clamped_ms, Ordering::Relaxed);
+                                        clock.finished.store(false, Ordering::Relaxed);
+                                        if desired_playing {
+                                            let now = clock.now_ms().max(1);
+                                            clock.started_epoch_ms.store(now, Ordering::Relaxed);
+                                            new_sink.play();
+                                        } else {
+                                            clock.started_epoch_ms.store(0, Ordering::Relaxed);
+                                            new_sink.pause();
+                                        }
+                                    }
+                                }
+                            }
+                            sink = Some(new_sink);
+                        }
                     }
                 }
             },

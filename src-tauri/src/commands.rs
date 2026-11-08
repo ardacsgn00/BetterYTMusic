@@ -57,6 +57,16 @@ pub fn player_set_volume(app: AppHandle, ctrl: Ctrl<'_>, volume: f32) {
 }
 
 #[tauri::command]
+pub fn player_list_output_devices() -> Vec<String> {
+    crate::player::engine::list_output_devices()
+}
+
+#[tauri::command]
+pub fn player_set_output_device(app: AppHandle, ctrl: Ctrl<'_>, device: Option<String>) {
+    ctrl.with(&app, |p| p.set_output_device(device));
+}
+
+#[tauri::command]
 pub fn player_play_index(app: AppHandle, ctrl: Ctrl<'_>, index: usize) {
     ctrl.with(&app, |p| p.play_index(index));
 }

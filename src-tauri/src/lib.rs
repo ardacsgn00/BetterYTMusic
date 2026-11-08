@@ -16,6 +16,10 @@ use tauri::{Manager, WindowEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if !taskbar::acquire_single_instance() {
+        return;
+    }
+
     tauri::Builder::default()
         .setup(|app| {
             let handle = app.handle().clone();
@@ -89,6 +93,8 @@ pub fn run() {
             commands::player_previous,
             commands::player_seek,
             commands::player_set_volume,
+            commands::player_list_output_devices,
+            commands::player_set_output_device,
             commands::player_play_index,
             commands::player_cycle_repeat,
             commands::player_toggle_shuffle,
