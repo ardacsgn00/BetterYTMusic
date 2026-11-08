@@ -42,9 +42,9 @@
   ];
 
   const fontScales: { id: FontScale; label: string }[] = [
-    { id: 'sm', label: 'Kompakt' },
-    { id: 'md', label: 'Standart' },
-    { id: 'lg', label: 'Geniş' }
+    { id: 'sm', label: 'Küçük (13px)' },
+    { id: 'md', label: 'Normal (14px)' },
+    { id: 'lg', label: 'Büyük (15.5px)' }
   ];
 
   const radii: { id: RadiusScale; label: string }[] = [
@@ -61,8 +61,8 @@
   ];
 
   const densities: { id: Density; label: string }[] = [
-    { id: 'comfortable', label: 'Dengeli' },
-    { id: 'compact', label: 'Sıkı Liste' }
+    { id: 'comfortable', label: 'Rahat (Geniş)' },
+    { id: 'compact', label: 'Sıkı (Kompakt)' }
   ];
 
   const cardSizes: { id: CardSize; label: string }[] = [
@@ -174,8 +174,8 @@
     </div>
 
     <div class="card block">
-      <h2>Sayfa Ölçeği (Zoom) & Liste Yoğunluğu</h2>
-      <p class="muted">Sayfa görünürlük oranını (%75–%135), metin boyutunu ve panel genişliklerini yönet.</p>
+      <h2>Sayfa Ölçeği (Zoom), Yazı & Liste Boyutları</h2>
+      <p class="muted">Sayfa zoom oranını (%75–%135), metin büyüklüğünü ve panel genişliklerini yönet.</p>
       <div class="sub-group">
         <span class="sub-label muted">Sayfa Görünürlük Oranı (%{theme.zoom})</span>
         <div class="opt-row">
@@ -204,8 +204,10 @@
           </button>
         </div>
       </div>
+
       <div class="sub-group">
-        <span class="sub-label muted">Metin Ölçeği & Liste Görünümü</span>
+        <span class="sub-label muted">Yazı / Metin Büyüklüğü</span>
+        <p class="sub-desc muted">Tüm sayfalardaki metinlerin genel boyutu.</p>
         <div class="opt-row">
           {#each fontScales as s (s.id)}
             <button
@@ -216,6 +218,13 @@
               {s.label}
             </button>
           {/each}
+        </div>
+      </div>
+
+      <div class="sub-group">
+        <span class="sub-label muted">Şarkı Listesi Satır Aralığı (Yoğunluk)</span>
+        <p class="sub-desc muted">Çalma listeleri ve sıradaki şarkılar arasındaki dikey boşluk.</p>
+        <div class="opt-row">
           {#each densities as d (d.id)}
             <button
               class="btn"
@@ -227,8 +236,10 @@
           {/each}
         </div>
       </div>
+
       <div class="sub-group">
         <span class="sub-label muted">Dinle Ekranı Panel Genişlikleri</span>
+        <p class="sub-desc muted">Kapak, şarkı sözleri ve sıra listesini fareyle çekip boyutlandırdıysan varsayılan oranlara sıfırlar.</p>
         <div class="opt-row">
           <button class="btn" onclick={() => theme.resetSplits()}>
             <Icon name="refresh" size={15} />
@@ -691,6 +702,14 @@
               <span class="insp-v">{theme.showRemainingTime ? 'Kalan Süre (-02:21)' : 'Toplam Süre (03:45)'}</span>
             </div>
             <div class="insp-badge">
+              <span class="insp-k">Yazı Boyutu:</span>
+              <span class="insp-v">{theme.fontScale === 'sm' ? 'Küçük (13px)' : theme.fontScale === 'lg' ? 'Büyük (15.5px)' : 'Normal (14px)'}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Liste Aralığı:</span>
+              <span class="insp-v">{theme.density === 'compact' ? 'Sıkı (Kompakt)' : 'Rahat (Geniş)'}</span>
+            </div>
+            <div class="insp-badge">
               <span class="insp-k">Sol Menü:</span>
               <span class="insp-v">{theme.sidebarCollapsed ? 'İkon Modu (74px)' : `${theme.sidebarWidth}px`}</span>
             </div>
@@ -882,6 +901,12 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+  }
+  .sub-desc {
+    font-size: 12px;
+    line-height: 1.35;
+    margin-top: -2px;
+    margin-bottom: 2px;
   }
   .opt-row {
     display: flex;
