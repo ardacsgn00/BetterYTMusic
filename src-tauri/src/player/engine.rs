@@ -652,44 +652,6 @@ fn run_worker(
                         }
                     }
                 }
-                EngineCmd::SetOutputDevice(dev_name) => {
-                    let pos_ms = clock.position_ms();
-                    let dur = clock.duration_ms.load(Ordering::Relaxed);
-                    let clamped_ms = if dur > 600 {
-                        pos_ms.min(dur - 500)
-                    } else {
-                        pos_ms
-                    };
-                    if let Some(old_sink) = sink.take() {
-                        old_sink.stop();
-                    }
-                    drop(stream_pair.take());
-                    stream_pair = open_output_stream(dev_name.as_deref());
-                    if let Some((_, handle)) = &stream_pair {
-                        if let Ok(new_sink) = Sink::try_new(handle) {
-                            new_sink.set_volume(volume);
-                            if let Some(bytes) = &current_bytes {
-                                if clock.has_audio.load(Ordering::Relaxed) {
-                                    let target = Duration::from_millis(clamped_ms);
-                                    if let Ok(dec) = SymphoniaSource::new_at(bytes.clone(), target) {
-                                        new_sink.append(dec);
-                                        clock.base_ms.store(clamped_ms, Ordering::Relaxed);
-                                        clock.finished.store(false, Ordering::Relaxed);
-                                        if desired_playing {
-                                            let now = clock.now_ms().max(1);
-                                            clock.started_epoch_ms.store(now, Ordering::Relaxed);
-                                            new_sink.play();
-                                        } else {
-                                            clock.started_epoch_ms.store(0, Ordering::Relaxed);
-                                            new_sink.pause();
-                                        }
-                                    }
-                                }
-                            }
-                            sink = Some(new_sink);
-                        }
-                    }
-                }
             },
             Err(mpsc::RecvTimeoutError::Timeout) => {}
             Err(mpsc::RecvTimeoutError::Disconnected) => break,
