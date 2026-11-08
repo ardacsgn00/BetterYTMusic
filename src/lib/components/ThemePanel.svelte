@@ -12,10 +12,18 @@
     type StartupView
   } from '#lib/theme.svelte.ts';
   import { player } from '#lib/player.svelte.ts';
-  import type { UpdateCheckResult } from '#lib/types.ts';
-  import Icon from './Icon.svelte';
+  import type { UpdateCheckResult, View } from '#lib/types.ts';
+  import Icon, { type IconName } from './Icon.svelte';
 
   const GITHUB_URL = 'https://github.com/ardacsgn00/betterytmusic';
+
+  const NAV_INFO: Record<View, { label: string; icon: IconName }> = {
+    now: { label: 'Dinle', icon: 'now' },
+    home: { label: 'Ana Sayfa', icon: 'home' },
+    search: { label: 'Ara', icon: 'search' },
+    library: { label: 'Kitaplık', icon: 'library' },
+    theme: { label: 'Ayarlar', icon: 'settings' }
+  };
 
   let checkingUpdate = $state(false);
   let updateResult = $state<UpdateCheckResult | null>(null);
@@ -316,8 +324,15 @@
       </div>
 
       <div class="sub-group">
-        <span class="sub-label muted">Sol Menü ({theme.sidebarCollapsed ? 'İkon Modu' : `${theme.sidebarWidth}px`} · Sağ kenardan sürüklenebilir)</span>
+        <span class="sub-label muted">Sol Menü ({theme.sidebarCollapsed ? 'İkon Modu (Varsayılan)' : `${theme.sidebarWidth}px`} · Kenardan sürüklenebilir)</span>
         <div class="opt-row">
+          <button
+            class="btn"
+            class:accent={theme.sidebarCollapsed}
+            onclick={() => theme.setSidebarWidth(74)}
+          >
+            Sadece İkon Modu (Varsayılan)
+          </button>
           <button
             class="btn"
             class:accent={!theme.sidebarCollapsed}
@@ -325,13 +340,48 @@
           >
             Tam Menü (228px)
           </button>
-          <button
-            class="btn"
-            class:accent={theme.sidebarCollapsed}
-            onclick={() => theme.setSidebarWidth(74)}
-          >
-            Sadece İkon Modu
+        </div>
+      </div>
+
+      <div class="sub-group">
+        <div class="sub-head-row">
+          <span class="sub-label muted">Sol Menü Buton Sıralaması</span>
+          <button class="btn reset-link-btn" onclick={() => theme.resetSidebarNavOrder()}>
+            <Icon name="refresh" size={13} />
+            Varsayılan Sıraya Sıfırla
           </button>
+        </div>
+        <p class="sub-desc muted">Menüdeki butonların sırasını yukarı/aşağı oklarıyla dilediğin gibi düzenle.</p>
+        <div class="nav-order-list">
+          {#each theme.sidebarNavOrder as navId, idx (navId)}
+            <div class="nav-order-item">
+              <div class="nav-order-left">
+                <span class="order-idx">{idx + 1}</span>
+                <span class="order-icon"><Icon name={NAV_INFO[navId].icon} size={16} /></span>
+                <span class="order-label">{NAV_INFO[navId].label}</span>
+              </div>
+              <div class="nav-order-actions">
+                <button
+                  class="btn icon-btn sm"
+                  disabled={idx === 0}
+                  title="Yukarı Taşı"
+                  aria-label="{NAV_INFO[navId].label} Yukarı Taşı"
+                  onclick={() => theme.moveSidebarNavItem(navId, 'up')}
+                >
+                  <Icon name="up" size={13} />
+                </button>
+                <button
+                  class="btn icon-btn sm"
+                  disabled={idx === theme.sidebarNavOrder.length - 1}
+                  title="Aşağı Taşı"
+                  aria-label="{NAV_INFO[navId].label} Aşağı Taşı"
+                  onclick={() => theme.moveSidebarNavItem(navId, 'down')}
+                >
+                  <Icon name="down" size={13} />
+                </button>
+              </div>
+            </div>
+          {/each}
         </div>
       </div>
 
@@ -588,18 +638,12 @@
                 {/if}
               </div>
               <div class="mw-nav-items">
-                <div class="mw-nav-item active">
-                  <Icon name="now" size={12} />
-                  {#if !theme.sidebarCollapsed}<span>Dinle</span>{/if}
-                </div>
-                <div class="mw-nav-item">
-                  <Icon name="home" size={12} />
-                  {#if !theme.sidebarCollapsed}<span>Ana Sayfa</span>{/if}
-                </div>
-                <div class="mw-nav-item">
-                  <Icon name="search" size={12} />
-                  {#if !theme.sidebarCollapsed}<span>Ara</span>{/if}
-                </div>
+                {#each theme.sidebarNavOrder as navId (navId)}
+                  <div class="mw-nav-item" class:active={navId === 'now'}>
+                    <Icon name={NAV_INFO[navId].icon} size={11} />
+                    {#if !theme.sidebarCollapsed}<span class="truncate">{NAV_INFO[navId].label}</span>{/if}
+                  </div>
+                {/each}
               </div>
             </div>
 
@@ -907,6 +951,78 @@
     line-height: 1.35;
     margin-top: -2px;
     margin-bottom: 2px;
+  }
+  .sub-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .reset-link-btn {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    gap: 5px;
+  }
+  .nav-order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .nav-order-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    border: 2px solid var(--border);
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .nav-order-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .order-idx {
+    font-size: 11px;
+    font-weight: 800;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+  }
+  .order-icon {
+    display: flex;
+    align-items: center;
+    color: var(--accent);
+  }
+  .order-label {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .nav-order-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .icon-btn.sm {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius);
   }
   .opt-row {
     display: flex;

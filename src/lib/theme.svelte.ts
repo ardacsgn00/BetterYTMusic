@@ -1,3 +1,5 @@
+import type { View } from '#lib/types.ts';
+
 export type ThemeMode = 'dark' | 'oled' | 'slate' | 'light' | 'system';
 export type FontId = 'system' | 'geometric' | 'rounded' | 'serif' | 'mono';
 export type FontScale = 'sm' | 'md' | 'lg';
@@ -7,6 +9,8 @@ export type Density = 'compact' | 'comfortable';
 export type PlayButtonShape = 'circle' | 'squircle';
 export type CardSize = 'compact' | 'normal' | 'large';
 export type StartupView = 'last' | 'home' | 'now' | 'library' | 'search';
+
+export const DEFAULT_NAV_ORDER: View[] = ['now', 'home', 'search', 'library', 'theme'];
 
 export const ACCENT_PRESETS = [
   { name: 'YT Kırmızı', value: '#ff4e45' },
@@ -104,8 +108,10 @@ class ThemeStore {
   /** 3-col Dinle view: left panel width % (22 – 46) and right panel width % (22 – 46). */
   split3Left = $state<number>(32);
   split3Right = $state<number>(32);
-  /** Sidebar width in px (74 = collapsed icon-only mode, or 172 – 320 expanded). */
-  sidebarWidth = $state<number>(228);
+  /** Sidebar width in px (74 = collapsed icon-only mode, or 172 – 320 expanded). Default: 74 (icon mode). */
+  sidebarWidth = $state<number>(74);
+  /** Custom order of navigation items in the sidebar. */
+  sidebarNavOrder = $state<View[]>([...DEFAULT_NAV_ORDER]);
   /** Play button shape in the bottom PlayerBar ('circle' | 'squircle'). */
   playButtonShape = $state<PlayButtonShape>('circle');
   /** Whether the right-side duration label in PlayerBar shows remaining time (-1:15) instead of total time (3:31). */
@@ -146,8 +152,15 @@ class ThemeStore {
       if (typeof saved.split3Right === 'number') {
         this.split3Right = Math.max(22, Math.min(46, saved.split3Right));
       }
-      if (typeof saved.sidebarWidth === 'number') {
+      if (typeof saved.sidebarWidth === 'number' && saved.sidebarWidth !== 228) {
         this.sidebarWidth = saved.sidebarWidth <= 136 ? 74 : Math.max(172, Math.min(320, Math.round(saved.sidebarWidth)));
+      } else {
+        this.sidebarWidth = 74;
+      }
+      if (Array.isArray(saved.sidebarNavOrder)) {
+        const valid = (saved.sidebarNavOrder as View[]).filter((v) => DEFAULT_NAV_ORDER.includes(v));
+        const missing = DEFAULT_NAV_ORDER.filter((v) => !valid.includes(v));
+        this.sidebarNavOrder = [...valid, ...missing];
       }
       if (saved.playButtonShape === 'circle' || saved.playButtonShape === 'squircle') {
         this.playButtonShape = saved.playButtonShape;
@@ -315,11 +328,28 @@ class ThemeStore {
     this.#apply();
   }
 
+  moveSidebarNavItem(id: View, direction: 'up' | 'down') {
+    const idx = this.sidebarNavOrder.indexOf(id);
+    if (idx < 0) return;
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= this.sidebarNavOrder.length) return;
+    const copy = [...this.sidebarNavOrder];
+    const [removed] = copy.splice(idx, 1);
+    copy.splice(targetIdx, 0, removed);
+    this.sidebarNavOrder = copy;
+    this.#apply();
+  }
+
+  resetSidebarNavOrder() {
+    this.sidebarNavOrder = [...DEFAULT_NAV_ORDER];
+    this.#apply();
+  }
+
   resetSplits() {
     this.split2Left = 52;
     this.split3Left = 32;
     this.split3Right = 32;
-    this.sidebarWidth = 228;
+    this.sidebarWidth = 74;
     this.#apply();
   }
 
@@ -336,7 +366,8 @@ class ThemeStore {
     this.split2Left = 52;
     this.split3Left = 32;
     this.split3Right = 32;
-    this.sidebarWidth = 228;
+    this.sidebarWidth = 74;
+    this.sidebarNavOrder = [...DEFAULT_NAV_ORDER];
     this.playButtonShape = 'circle';
     this.showRemainingTime = false;
     this.startupView = 'last';
@@ -384,6 +415,7 @@ class ThemeStore {
         split3Left: this.split3Left,
         split3Right: this.split3Right,
         sidebarWidth: this.sidebarWidth,
+        sidebarNavOrder: this.sidebarNavOrder,
         playButtonShape: this.playButtonShape,
         showRemainingTime: this.showRemainingTime,
         startupView: this.startupView,

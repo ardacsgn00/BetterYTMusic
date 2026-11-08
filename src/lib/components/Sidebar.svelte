@@ -6,13 +6,17 @@
 
   let { active, onselect }: { active: View; onselect: (v: View) => void } = $props();
 
-  const items: { id: View; label: string; icon: IconName }[] = [
-    { id: 'now', label: 'Dinle', icon: 'now' },
-    { id: 'home', label: 'Ana Sayfa', icon: 'home' },
-    { id: 'search', label: 'Ara', icon: 'search' },
-    { id: 'library', label: 'Kitaplık', icon: 'library' },
-    { id: 'theme', label: 'Ayarlar', icon: 'settings' }
-  ];
+  const ALL_ITEMS: Record<View, { id: View; label: string; icon: IconName }> = {
+    now: { id: 'now', label: 'Dinle', icon: 'now' },
+    home: { id: 'home', label: 'Ana Sayfa', icon: 'home' },
+    search: { id: 'search', label: 'Ara', icon: 'search' },
+    library: { id: 'library', label: 'Kitaplık', icon: 'library' },
+    theme: { id: 'theme', label: 'Ayarlar', icon: 'settings' }
+  };
+
+  const items = $derived(
+    theme.sidebarNavOrder.map((id) => ALL_ITEMS[id]).filter(Boolean)
+  );
 
   const brandName = $derived(theme.appName.trim() || 'BetterYTMusic');
   let resizing = $state(false);
