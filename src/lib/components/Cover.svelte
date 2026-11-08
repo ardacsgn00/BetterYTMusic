@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Track } from '#lib/types.ts';
+  import Icon from './Icon.svelte';
 
   let { track, size = '100%', radius = 'var(--radius)' }: { track: Track | null; size?: string; radius?: string } =
     $props();
@@ -11,7 +12,7 @@
     failed = false;
   });
 
-  const initial = $derived(track?.title.trim().charAt(0).toUpperCase() ?? '♪');
+  const titleChar = $derived(track?.title?.trim().charAt(0).toUpperCase() || '');
 </script>
 
 <div
@@ -22,8 +23,10 @@
 >
   {#if track?.thumbnail && !failed}
     <img src={track.thumbnail} alt="" loading="lazy" draggable="false" onerror={() => (failed = true)} />
+  {:else if titleChar}
+    <span class="initial">{titleChar}</span>
   {:else}
-    <span class="initial">{initial}</span>
+    <span class="initial-icon"><Icon name="disc" size={26} /></span>
   {/if}
 </div>
 
@@ -47,5 +50,10 @@
     font-weight: 800;
     color: rgb(0 0 0 / 0.28);
     line-height: 1;
+  }
+  .initial-icon {
+    display: grid;
+    place-items: center;
+    color: rgb(255 255 255 / 0.45);
   }
 </style>

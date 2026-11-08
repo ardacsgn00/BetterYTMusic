@@ -334,7 +334,7 @@
                 <div class="mock-divider" title="Fareyle sürüklenebilir sınır">
                   <span class="divider-grip"></span>
                   <div class="drag-ghost-tag">
-                    <span>↔️</span>
+                    <Icon name="move-horizontal" size={14} />
                   </div>
                 </div>
 
@@ -345,22 +345,22 @@
                   </div>
                   <div class="lrc-scroll-box">
                     <p class="lrc-line" class:active={activeLyricIdx === 0}>
-                      {#if activeLyricIdx === 0}<span class="lrc-play-arrow">▶</span>{/if}
+                      {#if activeLyricIdx === 0}<span class="lrc-play-arrow"><Icon name="play" size={9} /></span>{/if}
                       Harbi Anadolu Flex, aldırmadı bi' nefes
                     </p>
                     <p class="lrc-line" class:active={activeLyricIdx === 1}>
-                      {#if activeLyricIdx === 1}<span class="lrc-play-arrow">▶</span>{/if}
+                      {#if activeLyricIdx === 1}<span class="lrc-play-arrow"><Icon name="play" size={9} /></span>{/if}
                       Müziğe göre eşzamanlı söz akışı
                     </p>
                     <p class="lrc-line" class:active={activeLyricIdx === 2}>
-                      {#if activeLyricIdx === 2}<span class="lrc-play-arrow">▶</span>{/if}
+                      {#if activeLyricIdx === 2}<span class="lrc-play-arrow"><Icon name="play" size={9} /></span>{/if}
                       Satıra tıklayarak doğrudan o saniyeye atla
                     </p>
                   </div>
                 </div>
               </div>
               <div class="mock-hint-bar">
-                <span class="hint-pulse">💡</span>
+                <span class="hint-pulse"><Icon name="lightbulb" size={15} /></span>
                 <span class="mock-hint muted">
                   Sütun sınırları otomatik olarak genişleyip daralır; gerçek uygulamada dikey çizgiyi farenizle serbestçe çekebilirsiniz.
                 </span>
@@ -513,7 +513,7 @@
               <!-- Animated Windows 11 Taskbar Tray Mockup -->
               <div class="windows-tray-mockup">
                 <div class="taskbar-left">
-                  <div class="win-start-btn">🪟</div>
+                  <div class="win-start-btn"><Icon name="windows" size={13} /></div>
                   <div class="taskbar-app-icon active">
                     <Icon name="play" size={14} />
                   </div>
@@ -522,7 +522,7 @@
                   <div class="tray-app-item">
                     <span class="tray-icon-red"><Icon name="play" size={10} /></span>
                     <div class="tray-floating-tooltip">
-                      <span class="tooltip-note">🎵</span>
+                      <span class="tooltip-note"><Icon name="now" size={12} /></span>
                       <span>Arka planda çalıyor (Pencereyi kapatsan da kesintisiz)</span>
                     </div>
                   </div>
@@ -543,21 +543,21 @@
               </p>
               <div class="auth-perk-grid">
                 <div class="perk-card float-1">
-                  <span class="perk-icon">🎵</span>
+                  <span class="perk-icon"><Icon name="now" size={18} /></span>
                   <div class="perk-meta">
                     <strong>Tüm Listelerin</strong>
                     <span class="muted">70+ parçalık tam listeler</span>
                   </div>
                 </div>
                 <div class="perk-card float-2">
-                  <span class="perk-icon">⭐</span>
+                  <span class="perk-icon"><Icon name="star" size={18} /></span>
                   <div class="perk-meta">
                     <strong>Beğenilen Şarkılar</strong>
                     <span class="muted">Otomatik senkronize</span>
                   </div>
                 </div>
                 <div class="perk-card float-3">
-                  <span class="perk-icon">📻</span>
+                  <span class="perk-icon"><Icon name="radio" size={18} /></span>
                   <div class="perk-meta">
                     <strong>Sonsuz Radyo</strong>
                     <span class="muted">Tarzına uygun öneriler</span>
@@ -1093,10 +1093,18 @@
 
   .drag-ghost-tag {
     position: absolute;
-    top: -12px;
+    top: -14px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 12px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     animation: dragGripSway 3s infinite ease-in-out;
   }
 
@@ -1579,7 +1587,14 @@
   }
 
   .win-start-btn {
-    font-size: 14px;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: #00a4ef;
+    display: grid;
+    place-items: center;
   }
 
   .taskbar-app-icon {
@@ -1727,7 +1742,14 @@
   }
 
   .perk-icon {
-    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    display: grid;
+    place-items: center;
   }
 
   .perk-meta {

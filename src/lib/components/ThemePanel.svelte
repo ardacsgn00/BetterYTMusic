@@ -771,7 +771,7 @@
             </div>
           </div>
           <div class="sim-tip-box">
-            <span class="sim-tip-icon">💡</span>
+            <span class="sim-tip-icon"><Icon name="lightbulb" size={15} /></span>
             <p class="sim-tip muted">
               Sol taraftan yaptığın her seçim (renk, dokunsal kenar, buton stili, zoom, süre modu) anında bu simülasyonda ve uygulamada canlı olarak değişir.
             </p>
