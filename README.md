@@ -83,3 +83,15 @@ npm run tauri:build
 
 - **Arda Coşgun** — [@ardacsgn00](https://github.com/ardacsgn00)
 - **Proje Adresi:** [https://github.com/ardacsgn00/betterytmusic](https://github.com/ardacsgn00/betterytmusic)
+
+---
+
+## ⚠️ Legal Disclaimer
+
+**BetterYTMusic** is an **unofficial, open-source third-party desktop client**. 
+
+- **No Affiliation:** This project is independent and is **not** affiliated with, authorized, maintained, sponsored, or endorsed by YouTube, Google LLC, or any of their affiliates or subsidiaries.
+- **Trademarks:** All product names, logos, brands, trademarks, and registered trademarks mentioned or shown within this application belong to their respective owners. Their use does not imply any affiliation with or endorsement by them.
+- **No Media Hosting / DRM Bypass:** BetterYTMusic does **not** host, store, re-upload, or distribute any audio or video content, nor does it attempt to bypass any Digital Rights Management (DRM) protections. All media streams are accessed dynamically directly from YouTube servers for online playback only.
+- **Downloading & Ripping:** This application does **not** provide any functionality for downloading, converting, or saving offline copies of copyrighted media content.
+- **Terms of Service:** Users are solely responsible for ensuring that their use of this software complies with YouTube's Terms of Service and local copyright laws in their respective jurisdictions.
