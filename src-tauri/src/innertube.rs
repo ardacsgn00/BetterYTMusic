@@ -29,6 +29,12 @@ const ANDROID_VR_UA: &str =
 
 /// Filter param for "Songs" tab in YouTube Music search.
 const SONGS_FILTER_PARAM: &str = "EgWKAQIIAWoKEAkQBRAKEAMQBA%3D%3D";
+/// Filter param for "Featured Playlists" in YouTube Music search.
+const FEATURED_PLAYLISTS_FILTER_PARAM: &str = "EgeKAQQoADgBahIQDhAFEAMQChAJEAQQFRAQEBE%3D";
+/// Filter param for "Community Playlists" in YouTube Music search.
+const COMMUNITY_PLAYLISTS_FILTER_PARAM: &str = "EgeKAQQoAEABahIQDhAFEAMQChAJEAQQFRAQEBE%3D";
+/// Filter param for "Albums" in YouTube Music search.
+const ALBUMS_FILTER_PARAM: &str = "EgWKAQIYAWoSEA4QBRADEAoQCRAEEBUQEBAR";
 
 const PALETTE: &[&str] = &[
     "#e4572e", "#3a86ff", "#8338ec", "#ffbe0b", "#06d6a0", "#ef476f", "#118ab2", "#f4a261",
@@ -376,6 +382,42 @@ impl Innertube {
 
         let mut out = Vec::new();
         collect_responsive_items(&val, &mut out);
+        Ok(out)
+    }
+
+    /// Search YouTube Music playlists and albums.
+    pub fn search_playlists(&self, query: &str) -> Result<Vec<PlaylistCard>, String> {
+        let q = query.trim();
+        if q.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut out = Vec::new();
+        for param in &[
+            COMMUNITY_PLAYLISTS_FILTER_PARAM,
+            FEATURED_PLAYLISTS_FILTER_PARAM,
+            ALBUMS_FILTER_PARAM,
+        ] {
+            let body = json!({
+                "context": web_remix_context(),
+                "query": q,
+                "params": param
+            });
+
+            if let Ok(res) = self
+                .authed_post("https://music.youtube.com/youtubei/v1/search?prettyPrint=false")
+                .send_json(body)
+            {
+                if let Ok(val) = res.into_json::<Value>() {
+                    self.save_visitor_data(&val);
+                    collect_playlist_cards(&val, &mut out);
+                }
+            }
+            if out.len() >= 36 {
+                break;
+            }
+        }
+
         Ok(out)
     }
 
@@ -1155,6 +1197,16 @@ fn collect_playlist_cards(v: &Value, out: &mut Vec<PlaylistCard>) {
                         out.push(card);
                     }
                 }
+            } else if let Some(item) = map.get("musicResponsiveListItemRenderer") {
+                if let Some(card) = parse_responsive_playlist_card(item) {
+                    if let Some(existing) = out.iter_mut().find(|x| x.playlist_id == card.playlist_id) {
+                        if existing.thumbnail.is_none() && card.thumbnail.is_some() {
+                            existing.thumbnail = card.thumbnail;
+                        }
+                    } else {
+                        out.push(card);
+                    }
+                }
             }
             for child in map.values() {
                 collect_playlist_cards(child, out);
@@ -1169,9 +1221,67 @@ fn collect_playlist_cards(v: &Value, out: &mut Vec<PlaylistCard>) {
     }
 }
 
+fn parse_responsive_playlist_card(item: &Value) -> Option<PlaylistCard> {
+    let flex_col_0 = item.pointer("/flexColumns/0/musicResponsiveListItemFlexColumnRenderer")?;
+    let title = flex_col_0
+        .pointer("/text/runs/0/text")
+        .and_then(Value::as_str)?
+        .trim();
+    if title.is_empty() {
+        return None;
+    }
+
+    let nav = flex_col_0
+        .pointer("/text/runs/0/navigationEndpoint")
+        .or_else(|| item.get("navigationEndpoint"))?;
+
+    let raw_id = nav
+        .pointer("/browseEndpoint/browseId")
+        .and_then(Value::as_str)
+        .or_else(|| nav.pointer("/watchPlaylistEndpoint/playlistId").and_then(Value::as_str))?;
+
+    let is_playlist_or_album = raw_id.starts_with("VL")
+        || raw_id.starts_with("PL")
+        || raw_id.starts_with("RD")
+        || raw_id.starts_with("MPREb_")
+        || raw_id.starts_with("OLAK");
+
+    if !is_playlist_or_album {
+        return None;
+    }
+
+    let playlist_id = raw_id.trim_start_matches("VL").to_string();
+
+    let subtitle = item
+        .pointer("/flexColumns/1/musicResponsiveListItemFlexColumnRenderer/text/runs")
+        .and_then(Value::as_array)
+        .map(|runs| {
+            runs.iter()
+                .filter_map(|r| r.get("text").and_then(Value::as_str))
+                .collect::<String>()
+        })
+        .unwrap_or_else(|| "Çalma Listesi".to_string());
+
+    let thumbnail = item
+        .pointer("/thumbnail/musicThumbnailRenderer/thumbnail/thumbnails")
+        .and_then(Value::as_array)
+        .and_then(|a| a.last())
+        .and_then(|t| t.get("url"))
+        .and_then(Value::as_str)
+        .map(upscale_thumb);
+
+    Some(PlaylistCard {
+        color: color_for_id(&playlist_id),
+        playlist_id,
+        title: title.to_string(),
+        subtitle,
+        thumbnail,
+    })
+}
+
 fn parse_playlist_card(item: &Value) -> Option<PlaylistCard> {
     // Only pick items that do NOT have a direct single `watchEndpoint.videoId`,
-    // OR whose playlistId is a genuine playlist/mix/album (`RD...`, `PL...`, `OLAK...`).
+    // OR whose playlistId is a genuine playlist/mix/album (`RD...`, `PL...`, `OLAK...`, `MPREb_...`).
     let direct_vid = item
         .pointer("/navigationEndpoint/watchEndpoint/videoId")
         .and_then(Value::as_str);
@@ -1189,7 +1299,7 @@ fn parse_playlist_card(item: &Value) -> Option<PlaylistCard> {
         .or_else(|| {
             item.pointer("/navigationEndpoint/browseEndpoint/browseId")
                 .and_then(Value::as_str)
-                .filter(|b| b.starts_with("VL") || b.starts_with("RD"))
+                .filter(|b| b.starts_with("VL") || b.starts_with("RD") || b.starts_with("MPREb_") || b.starts_with("OLAK"))
                 .map(|b| b.trim_start_matches("VL"))
         })?;
 

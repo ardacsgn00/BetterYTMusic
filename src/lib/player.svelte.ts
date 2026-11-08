@@ -184,6 +184,7 @@ class PlayerStore {
     await invoke('player_set_output_device', { device: clean });
   };
   search = (query: string) => invoke<Track[]>('yt_search', { query });
+  searchPlaylists = (query: string) => invoke<PlaylistCard[]>('yt_search_playlists', { query });
   home = () => invoke<Track[]>('yt_home');
   homePlaylists = () => invoke<PlaylistCard[]>('yt_home_playlists');
   playlistTracks = (playlistId: string) => invoke<Track[]>('yt_playlist_tracks', { playlistId });

@@ -100,6 +100,7 @@ pub fn run() {
             commands::player_toggle_shuffle,
             commands::player_play_track,
             commands::yt_search,
+            commands::yt_search_playlists,
             commands::yt_home,
             commands::yt_home_playlists,
             commands::yt_playlist_tracks,

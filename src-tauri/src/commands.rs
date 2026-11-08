@@ -129,6 +129,14 @@ pub async fn yt_search(yt: Yt<'_>, query: String) -> Result<Vec<Track>, String> 
 }
 
 #[tauri::command]
+pub async fn yt_search_playlists(yt: Yt<'_>, query: String) -> Result<Vec<PlaylistCard>, String> {
+    let yt = yt.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || yt.search_playlists(&query))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn yt_home(yt: Yt<'_>) -> Result<Vec<Track>, String> {
     let yt = yt.inner().clone();
     tauri::async_runtime::spawn_blocking(move || yt.home_tracks())
