@@ -135,7 +135,7 @@ function contrastText(hex: string): string {
 class ThemeStore {
   mode = $state<ThemeMode>('dark');
   accent = $state<string>(ACCENT_PRESETS[0].value);
-  font = $state<FontId>('system');
+  font = $state<FontId>('cyber');
   fontScale = $state<FontScale>('md');
   radius = $state<RadiusScale>('normal');
   edgeDepth = $state<EdgeDepth>('normal');
@@ -172,7 +172,11 @@ class ThemeStore {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
       if (saved.mode) this.mode = saved.mode;
       if (saved.accent) this.accent = saved.accent;
-      if (saved.font) this.font = saved.font;
+      if (saved.font && saved.font !== 'system') {
+        this.font = saved.font;
+      } else {
+        this.font = 'cyber';
+      }
       if (saved.fontScale) this.fontScale = saved.fontScale;
       if (saved.radius) this.radius = saved.radius;
       if (saved.edgeDepth) this.edgeDepth = saved.edgeDepth;
@@ -396,7 +400,7 @@ class ThemeStore {
   reset() {
     this.mode = 'dark';
     this.accent = ACCENT_PRESETS[0].value;
-    this.font = 'system';
+    this.font = 'cyber';
     this.fontScale = 'md';
     this.radius = 'normal';
     this.edgeDepth = 'normal';
