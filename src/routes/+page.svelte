@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Sidebar from '#lib/components/Sidebar.svelte';
   import NowPlaying from '#lib/components/NowPlaying.svelte';
   import Queue from '#lib/components/Queue.svelte';
@@ -16,6 +17,18 @@
   let threeCol = $state(false);
   let nowGridEl = $state<HTMLElement | null>(null);
   let draggingHandle = $state<'2col' | '3left' | '3right' | null>(null);
+
+  function selectView(v: View) {
+    view = v;
+    if (v !== 'theme') {
+      theme.setLastView(v);
+    }
+  }
+
+  onMount(() => {
+    theme.init();
+    view = theme.initialView;
+  });
 
   // In-app shortcuts (global media keys are handled natively in Rust).
   function onKeydown(e: KeyboardEvent) {
@@ -104,7 +117,7 @@
 <svelte:window onkeydown={onKeydown} onwheel={{ handleEvent: onWheel, passive: false } as any} />
 
 <div class="shell" class:is-resizing={draggingHandle !== null}>
-  <Sidebar active={view} onselect={(v) => (view = v)} />
+  <Sidebar active={view} onselect={selectView} />
 
   <main style:zoom={`${theme.zoom}%`}>
     {#if view === 'now'}

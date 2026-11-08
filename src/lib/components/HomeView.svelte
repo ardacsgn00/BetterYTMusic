@@ -95,7 +95,7 @@
 
 <svelte:window onclick={() => (zoomOpen = false)} />
 
-<section class="view">
+<section class="view" data-card-size={theme.cardSize} class:hide-subs={theme.hideSubtitles}>
   {#if openedPlaylist}
     <!-- Dedicated Playlist Detail View -->
     <div class="pl-topbar">
@@ -654,12 +654,24 @@
   .sec-sub {
     font-size: 12px;
   }
+  .view.hide-subs .head p,
+  .view.hide-subs .sec-sub {
+    display: none;
+  }
 
   /* Mix & Discovery Playlists Grid */
   .mix-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
     gap: 14px;
+  }
+  .view[data-card-size='compact'] .mix-grid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+  }
+  .view[data-card-size='large'] .mix-grid {
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 16px;
   }
   .mix-card {
     display: grid;
@@ -670,6 +682,16 @@
     text-align: left;
     cursor: pointer;
     transition: transform 70ms ease, background-color 120ms ease;
+  }
+  .view[data-card-size='compact'] .mix-card {
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 10px;
+    padding: 9px;
+  }
+  .view[data-card-size='large'] .mix-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 16px;
+    padding: 14px;
   }
   .mix-card:hover {
     background: var(--surface-2);
@@ -689,6 +711,14 @@
     color: #fff;
     border: 2px solid var(--border);
     flex-shrink: 0;
+  }
+  .view[data-card-size='compact'] .mix-art {
+    width: 58px;
+    height: 58px;
+  }
+  .view[data-card-size='large'] .mix-art {
+    width: 88px;
+    height: 88px;
   }
   .mix-art img {
     width: 100%;
@@ -770,6 +800,14 @@
     grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
     gap: 12px;
   }
+  .view[data-card-size='compact'] .quick-grid {
+    grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+    gap: 10px;
+  }
+  .view[data-card-size='large'] .quick-grid {
+    grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));
+    gap: 14px;
+  }
   .quick-item {
     display: flex;
     align-items: center;
@@ -829,6 +867,14 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
     gap: 16px;
+  }
+  .view[data-card-size='compact'] .grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .view[data-card-size='large'] .grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
   }
   .item {
     position: relative;

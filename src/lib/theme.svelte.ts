@@ -4,6 +4,9 @@ export type FontScale = 'sm' | 'md' | 'lg';
 export type RadiusScale = 'sharp' | 'normal' | 'round';
 export type EdgeDepth = 'none' | 'subtle' | 'normal' | 'bold';
 export type Density = 'compact' | 'comfortable';
+export type PlayButtonShape = 'circle' | 'squircle';
+export type CardSize = 'compact' | 'normal' | 'large';
+export type StartupView = 'last' | 'home' | 'now' | 'library' | 'search';
 
 export const ACCENT_PRESETS = [
   { name: 'YT Kırmızı', value: '#ff4e45' },
@@ -101,6 +104,20 @@ class ThemeStore {
   /** 3-col Dinle view: left panel width % (22 – 46) and right panel width % (22 – 46). */
   split3Left = $state<number>(32);
   split3Right = $state<number>(32);
+  /** Sidebar width in px (74 = collapsed icon-only mode, or 172 – 320 expanded). */
+  sidebarWidth = $state<number>(228);
+  /** Play button shape in the bottom PlayerBar ('circle' | 'squircle'). */
+  playButtonShape = $state<PlayButtonShape>('circle');
+  /** Whether the right-side duration label in PlayerBar shows remaining time (-1:15) instead of total time (3:31). */
+  showRemainingTime = $state<boolean>(false);
+  /** Which tab opens when the app launches ('last' | 'home' | 'now' | 'library' | 'search'). */
+  startupView = $state<StartupView>('last');
+  /** Last active view (excluding settings) for 'last' startup mode. */
+  lastView = $state<'now' | 'home' | 'search' | 'library'>('now');
+  /** Home page card size / grid column density ('compact' | 'normal' | 'large'). */
+  cardSize = $state<CardSize>('normal');
+  /** Hide helper subtitles under page and section headers for a cleaner look. */
+  hideSubtitles = $state<boolean>(false);
 
   #media: MediaQueryList | null = null;
 
@@ -129,12 +146,52 @@ class ThemeStore {
       if (typeof saved.split3Right === 'number') {
         this.split3Right = Math.max(22, Math.min(46, saved.split3Right));
       }
+      if (typeof saved.sidebarWidth === 'number') {
+        this.sidebarWidth = saved.sidebarWidth <= 136 ? 74 : Math.max(172, Math.min(320, Math.round(saved.sidebarWidth)));
+      }
+      if (saved.playButtonShape === 'circle' || saved.playButtonShape === 'squircle') {
+        this.playButtonShape = saved.playButtonShape;
+      }
+      if (typeof saved.showRemainingTime === 'boolean') {
+        this.showRemainingTime = saved.showRemainingTime;
+      }
+      if (
+        saved.startupView === 'last' ||
+        saved.startupView === 'home' ||
+        saved.startupView === 'now' ||
+        saved.startupView === 'library' ||
+        saved.startupView === 'search'
+      ) {
+        this.startupView = saved.startupView;
+      }
+      if (
+        saved.lastView === 'now' ||
+        saved.lastView === 'home' ||
+        saved.lastView === 'search' ||
+        saved.lastView === 'library'
+      ) {
+        this.lastView = saved.lastView;
+      }
+      if (saved.cardSize === 'compact' || saved.cardSize === 'normal' || saved.cardSize === 'large') {
+        this.cardSize = saved.cardSize;
+      }
+      if (typeof saved.hideSubtitles === 'boolean') {
+        this.hideSubtitles = saved.hideSubtitles;
+      }
     } catch {
       /* ignore corrupt storage */
     }
     this.#media = matchMedia('(prefers-color-scheme: light)');
     this.#media.addEventListener('change', () => this.mode === 'system' && this.#apply());
     this.#apply();
+  }
+
+  get sidebarCollapsed(): boolean {
+    return this.sidebarWidth <= 96;
+  }
+
+  get initialView(): 'now' | 'home' | 'search' | 'library' {
+    return this.startupView === 'last' ? this.lastView : this.startupView;
   }
 
   get resolved(): 'dark' | 'oled' | 'slate' | 'light' {
@@ -208,10 +265,61 @@ class ThemeStore {
     this.#apply();
   }
 
+  setSidebarWidth(px: number) {
+    if (px <= 136) {
+      this.sidebarWidth = 74;
+    } else {
+      this.sidebarWidth = Math.max(172, Math.min(320, Math.round(px)));
+    }
+    this.#apply();
+  }
+
+  toggleSidebarCollapsed() {
+    this.sidebarWidth = this.sidebarCollapsed ? 228 : 74;
+    this.#apply();
+  }
+
+  setPlayButtonShape(shape: PlayButtonShape) {
+    this.playButtonShape = shape;
+    this.#apply();
+  }
+
+  setShowRemainingTime(val: boolean) {
+    this.showRemainingTime = val;
+    this.#apply();
+  }
+
+  toggleRemainingTime() {
+    this.showRemainingTime = !this.showRemainingTime;
+    this.#apply();
+  }
+
+  setStartupView(v: StartupView) {
+    this.startupView = v;
+    this.#apply();
+  }
+
+  setLastView(v: 'now' | 'home' | 'search' | 'library') {
+    if (this.lastView === v) return;
+    this.lastView = v;
+    this.#apply();
+  }
+
+  setCardSize(size: CardSize) {
+    this.cardSize = size;
+    this.#apply();
+  }
+
+  setHideSubtitles(hide: boolean) {
+    this.hideSubtitles = hide;
+    this.#apply();
+  }
+
   resetSplits() {
     this.split2Left = 52;
     this.split3Left = 32;
     this.split3Right = 32;
+    this.sidebarWidth = 228;
     this.#apply();
   }
 
@@ -228,6 +336,12 @@ class ThemeStore {
     this.split2Left = 52;
     this.split3Left = 32;
     this.split3Right = 32;
+    this.sidebarWidth = 228;
+    this.playButtonShape = 'circle';
+    this.showRemainingTime = false;
+    this.startupView = 'last';
+    this.cardSize = 'normal';
+    this.hideSubtitles = false;
     this.#apply();
   }
 
@@ -236,6 +350,8 @@ class ThemeStore {
     root.dataset.theme = this.resolved;
     root.dataset.density = this.density;
     root.dataset.edge = this.edgeDepth;
+    root.dataset.cardSize = this.cardSize;
+    root.dataset.subtitles = this.hideSubtitles ? 'hidden' : 'visible';
     root.style.setProperty('--accent', this.accent);
     root.style.setProperty('--on-accent', contrastText(this.accent));
 
@@ -250,6 +366,7 @@ class ThemeStore {
 
     root.style.setProperty('--edge-depth', EDGE_MAP[this.edgeDepth] ?? '4px');
     root.style.setProperty('--page-zoom', `${this.zoom}%`);
+    root.style.setProperty('--sidebar-w', `${this.sidebarWidth}px`);
 
     localStorage.setItem(
       STORAGE_KEY,
@@ -265,7 +382,14 @@ class ThemeStore {
         zoom: this.zoom,
         split2Left: this.split2Left,
         split3Left: this.split3Left,
-        split3Right: this.split3Right
+        split3Right: this.split3Right,
+        sidebarWidth: this.sidebarWidth,
+        playButtonShape: this.playButtonShape,
+        showRemainingTime: this.showRemainingTime,
+        startupView: this.startupView,
+        lastView: this.lastView,
+        cardSize: this.cardSize,
+        hideSubtitles: this.hideSubtitles
       })
     );
   }

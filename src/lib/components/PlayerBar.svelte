@@ -1,6 +1,7 @@
 <script lang="ts">
   import { player } from '#lib/player.svelte.ts';
   import { library } from '#lib/library.svelte.ts';
+  import { theme } from '#lib/theme.svelte.ts';
   import { formatTime } from '#lib/format.ts';
   import Cover from './Cover.svelte';
   import Icon from './Icon.svelte';
@@ -8,6 +9,12 @@
 
   const s = $derived(player.state);
   const liked = $derived(library.isFavorite(s.track?.id));
+  const endTimeLabel = $derived.by(() => {
+    if (theme.showRemainingTime && s.durationMs > 0) {
+      return `-${formatTime(Math.max(0, s.durationMs - player.position))}`;
+    }
+    return formatTime(s.durationMs);
+  });
 
   // Remember volume before muting so unmute restores it.
   let lastVolume = 0.8;
@@ -63,6 +70,7 @@
       <button
         class="btn accent icon play"
         class:is-play={!s.isPlaying}
+        class:squircle={theme.playButtonShape === 'squircle'}
         title={s.isPlaying ? 'Duraklat' : 'Oynat'}
         aria-label={s.isPlaying ? 'Duraklat' : 'Oynat'}
         onclick={player.toggle}
@@ -92,7 +100,14 @@
         step={250}
         oncommit={(v) => player.seek(v)}
       />
-      <span class="time">{formatTime(s.durationMs)}</span>
+      <button
+        type="button"
+        class="time time-btn"
+        title={theme.showRemainingTime ? 'Toplam süreyi göster' : 'Kalan süreyi göster'}
+        onclick={() => theme.toggleRemainingTime()}
+      >
+        {endTimeLabel}
+      </button>
     </div>
   </div>
 
@@ -158,6 +173,9 @@
     height: 54px;
     border-radius: 50%;
   }
+  .play.squircle {
+    border-radius: var(--radius);
+  }
   .play.is-play :global(svg) {
     transform: translateX(-1px);
   }
@@ -167,11 +185,29 @@
     gap: 12px;
   }
   .time {
-    min-width: 40px;
+    min-width: 44px;
     font-size: 12px;
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
     text-align: center;
+  }
+  .time-btn {
+    background: transparent;
+    border: 0;
+    padding: 2px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    transition:
+      color 120ms ease,
+      background-color 120ms ease;
+  }
+  .time-btn:hover {
+    color: var(--text);
+    background: var(--surface-2);
   }
   .volume {
     display: flex;

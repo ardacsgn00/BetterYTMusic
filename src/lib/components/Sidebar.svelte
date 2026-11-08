@@ -15,10 +15,26 @@
   ];
 
   const brandName = $derived(theme.appName.trim() || 'BetterYTMusic');
+  let resizing = $state(false);
+
+  function startResize(e: PointerEvent) {
+    e.preventDefault();
+    resizing = true;
+    (e.currentTarget as HTMLElement)?.setPointerCapture(e.pointerId);
+  }
+
+  function onResizeMove(e: PointerEvent) {
+    if (!resizing) return;
+    theme.setSidebarWidth(e.clientX);
+  }
+
+  function stopResize() {
+    resizing = false;
+  }
 </script>
 
-<nav class="sidebar">
-  <div class="brand">
+<nav class="sidebar" class:collapsed={theme.sidebarCollapsed} class:resizing>
+  <div class="brand" title={brandName}>
     <span class="logo"><Icon name="play" size={18} /></span>
     <span class="name truncate">{brandName}</span>
   </div>
@@ -42,7 +58,7 @@
 
   <div class="account">
     {#if player.auth.loggedIn}
-      <div class="profile-card">
+      <div class="profile-card" title={player.auth.accountName ?? 'YouTube Music'}>
         <div class="avatar">
           <Icon name="user" size={18} />
         </div>
@@ -70,8 +86,12 @@
             <span class="acc-sub truncate muted">Kitaplık için giriş yap</span>
           </div>
         </div>
-        <button class="btn accent full" onclick={player.login}>
-          Google ile Bağlan
+        <button class="btn accent full login-btn" title="Google ile Bağlan" onclick={player.login}>
+          {#if theme.sidebarCollapsed}
+            <Icon name="user" size={17} />
+          {:else}
+            Google ile Bağlan
+          {/if}
         </button>
       </div>
     {/if}
@@ -81,10 +101,27 @@
       <span class="ver-badge">v{__APP_VERSION__}</span>
     </div>
   </div>
+
+  <!-- Draggable right-edge splitter for resizing or collapsing the sidebar -->
+  <div
+    class="side-resizer"
+    class:active={resizing}
+    role="separator"
+    aria-orientation="vertical"
+    title="Sol menü genişliğini ayarlamak için sürükle (İkon moduna geçmek için daralt veya çift tıkla)"
+    onpointerdown={startResize}
+    onpointermove={onResizeMove}
+    onpointerup={stopResize}
+    onpointercancel={stopResize}
+    ondblclick={() => theme.toggleSidebarCollapsed()}
+  >
+    <span class="side-grip"></span>
+  </div>
 </nav>
 
 <style>
   .sidebar {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -92,6 +129,77 @@
     background: var(--surface);
     border-right: 2px solid var(--border);
     min-height: 0;
+  }
+  .sidebar.resizing {
+    user-select: none;
+  }
+  .side-resizer {
+    position: absolute;
+    top: 0;
+    right: -6px;
+    bottom: 0;
+    width: 10px;
+    cursor: col-resize;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+  }
+  .side-grip {
+    width: 4px;
+    height: 40px;
+    border-radius: 4px;
+    background: transparent;
+    transition:
+      background-color 120ms ease,
+      height 120ms ease;
+  }
+  .side-resizer:hover .side-grip,
+  .side-resizer.active .side-grip {
+    background: var(--accent);
+    height: 64px;
+  }
+  .sidebar.collapsed {
+    padding: 18px 10px;
+    align-items: center;
+  }
+  .sidebar.collapsed .brand {
+    padding: 4px 0;
+    justify-content: center;
+  }
+  .sidebar.collapsed .brand .name,
+  .sidebar.collapsed .label,
+  .sidebar.collapsed .profile-meta,
+  .sidebar.collapsed .logged-out-top,
+  .sidebar.collapsed .footer-row {
+    display: none;
+  }
+  .sidebar.collapsed ul {
+    width: 100%;
+    align-items: center;
+  }
+  .sidebar.collapsed .nav-btn {
+    justify-content: center;
+    padding: 10px;
+  }
+  .sidebar.collapsed .account {
+    width: 100%;
+    align-items: center;
+  }
+  .sidebar.collapsed .profile-card {
+    flex-direction: column;
+    padding: 6px;
+    gap: 6px;
+    align-items: center;
+  }
+  .sidebar.collapsed .avatar {
+    display: none;
+  }
+  .sidebar.collapsed .login-btn {
+    padding: 0;
+    width: 40px;
+    min-width: 40px;
   }
   .brand {
     display: flex;
@@ -260,7 +368,8 @@
     .label,
     .profile-meta,
     .logged-out-top,
-    .footer-row {
+    .footer-row,
+    .side-resizer {
       display: none;
     }
     ul {

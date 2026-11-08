@@ -7,7 +7,9 @@
     type FontScale,
     type RadiusScale,
     type EdgeDepth,
-    type Density
+    type Density,
+    type CardSize,
+    type StartupView
   } from '#lib/theme.svelte.ts';
   import { player } from '#lib/player.svelte.ts';
   import type { UpdateCheckResult } from '#lib/types.ts';
@@ -61,6 +63,20 @@
   const densities: { id: Density; label: string }[] = [
     { id: 'comfortable', label: 'Dengeli' },
     { id: 'compact', label: 'Sıkı Liste' }
+  ];
+
+  const cardSizes: { id: CardSize; label: string }[] = [
+    { id: 'compact', label: 'Kompakt' },
+    { id: 'normal', label: 'Standart' },
+    { id: 'large', label: 'Geniş' }
+  ];
+
+  const startupViews: { id: StartupView; label: string }[] = [
+    { id: 'last', label: 'Son Bıraktığım' },
+    { id: 'home', label: 'Ana Sayfa' },
+    { id: 'now', label: 'Dinle' },
+    { id: 'library', label: 'Kitaplık' },
+    { id: 'search', label: 'Ara' }
   ];
 
   const isPreset = $derived(ACCENT_PRESETS.some((p) => p.value === theme.accent));
@@ -248,24 +264,141 @@
     </div>
 
     <div class="card block">
-      <h2>Uygulama Başlığı</h2>
-      <p class="muted">Sol üst köşede görünen BetterYTMusic yazısını istediğin isimle değiştir.</p>
-      <div class="name-row">
-        <input
-          class="text-input"
-          type="text"
-          maxlength="28"
-          placeholder="BetterYTMusic"
-          value={theme.appName}
-          oninput={(e) => theme.setAppName(e.currentTarget.value)}
-        />
-        <button
-          class="btn"
-          onclick={() => theme.setAppName('BetterYTMusic')}
-          disabled={theme.appName === 'BetterYTMusic'}
-        >
-          Sıfırla
-        </button>
+      <h2>Ana Sayfa & Sol Menü Düzeni</h2>
+      <p class="muted">Açılış sekmesini, kart boyutlarını, sol menü modunu ve başlık alt yazılarını özelleştir.</p>
+      <div class="sub-group">
+        <span class="sub-label muted">Açılışta Başlatılacak Sekme</span>
+        <div class="opt-row">
+          {#each startupViews as sv (sv.id)}
+            <button
+              class="btn"
+              class:accent={theme.startupView === sv.id}
+              onclick={() => theme.setStartupView(sv.id)}
+            >
+              {sv.label}
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="sub-group">
+        <span class="sub-label muted">Ana Sayfa Kart Boyutu & Yoğunluğu</span>
+        <div class="opt-row">
+          {#each cardSizes as cs (cs.id)}
+            <button
+              class="btn"
+              class:accent={theme.cardSize === cs.id}
+              onclick={() => theme.setCardSize(cs.id)}
+            >
+              {cs.label}
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="sub-group">
+        <span class="sub-label muted">Sol Menü ({theme.sidebarCollapsed ? 'İkon Modu' : `${theme.sidebarWidth}px`} · Sağ kenardan sürüklenebilir)</span>
+        <div class="opt-row">
+          <button
+            class="btn"
+            class:accent={!theme.sidebarCollapsed}
+            onclick={() => theme.setSidebarWidth(228)}
+          >
+            Tam Menü (228px)
+          </button>
+          <button
+            class="btn"
+            class:accent={theme.sidebarCollapsed}
+            onclick={() => theme.setSidebarWidth(74)}
+          >
+            Sadece İkon Modu
+          </button>
+        </div>
+      </div>
+
+      <div class="sub-group">
+        <span class="sub-label muted">Bölüm Açıklama Alt Yazıları</span>
+        <div class="opt-row">
+          <button
+            class="btn"
+            class:accent={!theme.hideSubtitles}
+            onclick={() => theme.setHideSubtitles(false)}
+          >
+            Göster
+          </button>
+          <button
+            class="btn"
+            class:accent={theme.hideSubtitles}
+            onclick={() => theme.setHideSubtitles(true)}
+          >
+            Gizle (Sade Başlıklar)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card block">
+      <h2>Alt Oynatıcı Bar & Uygulama Başlığı</h2>
+      <p class="muted">Oynat düğmesi şeklini, süre görünümünü ve sol üstteki uygulama adını seç.</p>
+      <div class="sub-group">
+        <span class="sub-label muted">Oynat Düğmesi Stili</span>
+        <div class="opt-row">
+          <button
+            class="btn"
+            class:accent={theme.playButtonShape === 'circle'}
+            onclick={() => theme.setPlayButtonShape('circle')}
+          >
+            Yuvarlak Daire
+          </button>
+          <button
+            class="btn"
+            class:accent={theme.playButtonShape === 'squircle'}
+            onclick={() => theme.setPlayButtonShape('squircle')}
+          >
+            Yumuşatılmış Kare
+          </button>
+        </div>
+      </div>
+
+      <div class="sub-group">
+        <span class="sub-label muted">İlerleme Çubuğu Sağ Süre Gösterimi</span>
+        <div class="opt-row">
+          <button
+            class="btn"
+            class:accent={!theme.showRemainingTime}
+            onclick={() => theme.setShowRemainingTime(false)}
+          >
+            Toplam Süre (3:31)
+          </button>
+          <button
+            class="btn"
+            class:accent={theme.showRemainingTime}
+            onclick={() => theme.setShowRemainingTime(true)}
+          >
+            Kalan Süre (-1:15)
+          </button>
+        </div>
+      </div>
+
+      <div class="sub-group">
+        <span class="sub-label muted">Uygulama Başlığı</span>
+        <div class="name-row">
+          <input
+            class="text-input"
+            type="text"
+            maxlength="28"
+            placeholder="BetterYTMusic"
+            value={theme.appName}
+            oninput={(e) => theme.setAppName(e.currentTarget.value)}
+          />
+          <button
+            class="btn"
+            onclick={() => theme.setAppName('BetterYTMusic')}
+            disabled={theme.appName === 'BetterYTMusic'}
+          >
+            Sıfırla
+          </button>
+        </div>
       </div>
     </div>
 
