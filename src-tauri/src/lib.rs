@@ -13,30 +13,9 @@ use std::sync::Arc;
 use innertube::Innertube;
 use player::PlayerController;
 use settings::SettingsManager;
-use tauri::Manager;
-#[cfg(desktop)]
-use tauri::WindowEvent;
+use tauri::{Manager, WindowEvent};
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    std::panic::set_hook(Box::new(|info| {
-        eprintln!("[RUST PANIC] {info}");
-        #[cfg(target_os = "android")]
-        {
-            use std::ffi::{c_char, CString};
-            let msg = format!("BetterYTMusic PANIC: {info}\0");
-            if let (Ok(tag), Ok(text)) = (CString::new("BetterYTMusic"), CString::new(msg)) {
-                unsafe {
-                    extern "C" {
-                        fn __android_log_write(prio: i32, tag: *const c_char, text: *const c_char) -> i32;
-                    }
-                    __android_log_write(6, tag.as_ptr(), text.as_ptr());
-                }
-            }
-        }
-    }));
-
-    #[cfg(desktop)]
     if !taskbar::acquire_single_instance() {
         return;
     }
@@ -78,13 +57,10 @@ pub fn run() {
                 }
             });
 
-            #[cfg(desktop)]
-            {
-                // Only show the main window if not started with `--minimized`.
-                let start_hidden = std::env::args().any(|a| a == "--minimized");
-                if !start_hidden {
-                    tray::show_main_window(&handle);
-                }
+            // Only show the main window if not started with `--minimized`.
+            let start_hidden = std::env::args().any(|a| a == "--minimized");
+            if !start_hidden {
+                tray::show_main_window(&handle);
             }
             let tb = taskbar::init(&handle);
             app.state::<PlayerController>().attach_taskbar(tb);
@@ -92,22 +68,19 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|_window, _event| {
-            #[cfg(desktop)]
-            {
-                // Closing the window either hides to the tray or exits, based on settings.
-                if let WindowEvent::CloseRequested { api, .. } = _event {
-                    if _window.label() == "main" {
-                        let close_to_tray = _window
-                            .app_handle()
-                            .try_state::<Arc<SettingsManager>>()
-                            .map(|s| s.get().close_to_tray)
-                            .unwrap_or(true);
-                        if close_to_tray {
-                            api.prevent_close();
-                            let _ = _window.hide();
-                        } else {
-                            _window.app_handle().exit(0);
-                        }
+            // Closing the window either hides to the tray or exits, based on settings.
+            if let WindowEvent::CloseRequested { api, .. } = _event {
+                if _window.label() == "main" {
+                    let close_to_tray = _window
+                        .app_handle()
+                        .try_state::<Arc<SettingsManager>>()
+                        .map(|s| s.get().close_to_tray)
+                        .unwrap_or(true);
+                    if close_to_tray {
+                        api.prevent_close();
+                        let _ = _window.hide();
+                    } else {
+                        _window.app_handle().exit(0);
                     }
                 }
             }

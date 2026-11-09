@@ -1,9 +1,7 @@
 //! Mini player mode: the main window itself shrinks into a small, borderless,
 //! always-on-top widget on desktop.
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-mod desktop {
-    use std::sync::Mutex;
+use std::sync::Mutex;
     use serde::{Deserialize, Serialize};
     use tauri::{
         AppHandle, LogicalSize, Manager, PhysicalPosition, PhysicalSize, Position, Size, State,
@@ -183,50 +181,3 @@ mod desktop {
             .start_dragging()
             .map_err(|e| e.to_string())
     }
-}
-
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-pub use desktop::*;
-
-#[cfg(any(target_os = "android", target_os = "ios"))]
-mod mobile {
-    use serde::{Deserialize, Serialize};
-    use tauri::{AppHandle, State};
-
-    #[derive(Default)]
-    pub struct MiniState;
-
-    #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-    pub struct MiniPos {
-        pub x: i32,
-        pub y: i32,
-    }
-
-    #[tauri::command]
-    pub fn window_enter_mini(_app: AppHandle, _state: State<'_, MiniState>, _layout: String, _pos: Option<MiniPos>) -> Result<(), String> {
-        Ok(())
-    }
-
-    #[tauri::command]
-    pub fn window_set_mini_layout(_app: AppHandle, _layout: String) -> Result<(), String> {
-        Ok(())
-    }
-
-    #[tauri::command]
-    pub fn window_exit_mini(_app: AppHandle, _state: State<'_, MiniState>) -> Result<Option<MiniPos>, String> {
-        Ok(None)
-    }
-
-    #[tauri::command]
-    pub fn window_set_always_on_top(_app: AppHandle, _on: bool) -> Result<(), String> {
-        Ok(())
-    }
-
-    #[tauri::command]
-    pub fn window_start_drag(_app: AppHandle) -> Result<(), String> {
-        Ok(())
-    }
-}
-
-#[cfg(any(target_os = "android", target_os = "ios"))]
-pub use mobile::*;

@@ -324,9 +324,9 @@ pub async fn auth_login(app: AppHandle) -> Result<(), String> {
         .map_err(|e: <tauri::Url as std::str::FromStr>::Err| e.to_string())?;
 
     let builder = WebviewWindowBuilder::new(&app, "yt-login", WebviewUrl::External(login_url))
-        .title("YouTube Music — Google Hesabı ile Giriş Yap");
-    #[cfg(desktop)]
-    let builder = builder.inner_size(520.0, 680.0).center();
+        .title("YouTube Music — Google Hesabı ile Giriş Yap")
+        .inner_size(520.0, 680.0)
+        .center();
 
     let app_for_load = app.clone();
     builder

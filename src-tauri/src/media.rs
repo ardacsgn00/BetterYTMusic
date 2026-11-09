@@ -7,24 +7,16 @@
 //! `MediaControls` lives on its own thread and is fed through a channel, so the
 //! player never blocks on OS calls and we don't depend on it being `Send`.
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-use std::sync::mpsc;
-use std::sync::mpsc::Sender;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use std::sync::mpsc::{self, Sender};
 use std::thread;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use std::time::Duration;
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use souvlaki::{
     MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig,
     SeekDirection,
 };
-use tauri::AppHandle;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use crate::player::PlayerController;
 
 pub type MediaSender = Sender<MediaUpdate>;
@@ -45,12 +37,6 @@ pub enum MediaUpdate {
 
 const SEEK_STEP_MS: u64 = 10_000;
 
-#[cfg(any(target_os = "android", target_os = "ios"))]
-pub fn spawn(_app: &AppHandle) -> Option<MediaSender> {
-    None
-}
-
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn spawn(app: &AppHandle) -> Option<MediaSender> {
     // SMTC needs the HWND of our window; raw pointers aren't Send, so pass as usize.
     #[cfg(target_os = "windows")]
@@ -118,7 +104,6 @@ pub fn spawn(app: &AppHandle) -> Option<MediaSender> {
     Some(tx)
 }
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn handle_event(app: &AppHandle, event: MediaControlEvent) {
     let ctrl = app.state::<PlayerController>();
     match event {
@@ -138,7 +123,6 @@ fn handle_event(app: &AppHandle, event: MediaControlEvent) {
     }
 }
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn seek_by(app: &AppHandle, dir: SeekDirection, step_ms: u64) {
     let ctrl = app.state::<PlayerController>();
     let pos = ctrl.snapshot().position_ms;
