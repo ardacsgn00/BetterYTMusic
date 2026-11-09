@@ -511,6 +511,20 @@
       <div class="toggle-list">
         <div class="toggle-row">
           <div class="toggle-text">
+            <span class="t-title">Kuyruk Sonu Otomatik Çalma (Autoplay)</span>
+            <span class="t-desc muted">Sıradaki şarkılar bittiğinde YouTube Music benzer parçalarla kesintisiz çalmaya devam eder.</span>
+          </div>
+          <button
+            class="btn toggle-btn"
+            class:accent={player.settings.autoplay}
+            onclick={() => player.updateSettings({ autoplay: !player.settings.autoplay })}
+          >
+            {player.settings.autoplay ? 'Açık' : 'Kapalı'}
+          </button>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-text">
             <span class="t-title">Kapatınca Sistem Tepsisinde (Tray) Kal</span>
             <span class="t-desc muted">X düğmesine basıldığında müzik arka planda çalmaya devam eder.</span>
           </div>

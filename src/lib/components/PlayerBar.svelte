@@ -56,9 +56,28 @@
     <Cover track={s.track} size="56px" radius="var(--radius-sm)" />
     <div class="text">
       <span class="title truncate">{s.track?.title ?? '—'}</span>
-      <span class="artist truncate muted">{s.track?.artist ?? ''}</span>
+      {#if s.track?.artist}
+        <button
+          type="button"
+          class="artist-btn truncate muted"
+          title="{s.track.artist} Sanatçı Sayfasını Aç"
+          onclick={() => player.openArtist(s.track!.artist)}
+        >
+          {s.track.artist}
+        </button>
+      {:else}
+        <span class="artist truncate muted">{s.track?.artist ?? ''}</span>
+      {/if}
     </div>
     {#if s.track}
+      <button
+        class="btn ghost icon radio-btn"
+        title="Şarkı Radyosu Başlat"
+        aria-label="Şarkı Radyosu Başlat"
+        onclick={() => player.startRadio(s.track!)}
+      >
+        <Icon name="radio" size={18} />
+      </button>
       <button
         class="btn ghost icon fav-btn"
         class:on={liked}
@@ -106,6 +125,15 @@
         onclick={player.toggleShuffle}
       >
         <Icon name="shuffle" size={20} />
+      </button>
+      <button
+        class="btn ghost icon autoplay-btn"
+        class:on={player.settings.autoplay}
+        title={player.settings.autoplay ? 'Otomatik Çalma: Açık (Kuyruk bitince benzer şarkılar kesintisiz çalar)' : 'Otomatik Çalma: Kapalı'}
+        aria-label="Otomatik Çalma"
+        onclick={() => player.updateSettings({ autoplay: !player.settings.autoplay })}
+      >
+        <Icon name="infinity" size={19} />
       </button>
     </div>
 

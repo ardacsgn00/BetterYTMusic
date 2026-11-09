@@ -28,10 +28,37 @@ export interface LyricsData {
   source: string;
 }
 
+export interface MoodCategory {
+  title: string;
+  params: string;
+  color: string;
+}
+
+export interface ArtistCard {
+  channelId: string;
+  name: string;
+  subscribers: string | null;
+  thumbnail: string | null;
+}
+
+export interface ArtistData {
+  channelId: string;
+  name: string;
+  description: string | null;
+  subscribers: string | null;
+  monthlyListeners: string | null;
+  thumbnail: string | null;
+  topTracks: Track[];
+  albums: PlaylistCard[];
+  singles: PlaylistCard[];
+  similarArtists: ArtistCard[];
+}
+
 export interface AppSettings {
   closeToTray: boolean;
   launchOnStartup: boolean;
   startMinimized: boolean;
+  autoplay: boolean;
 }
 
 export interface UpdateCheckResult {

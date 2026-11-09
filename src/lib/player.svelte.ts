@@ -2,8 +2,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type {
   AppSettings,
+  ArtistCard,
+  ArtistData,
   AuthStatus,
   LyricsData,
+  MoodCategory,
   PlayerSnapshot,
   PlaylistCard,
   Track,
@@ -40,13 +43,17 @@ class PlayerStore {
   settings = $state<AppSettings>({
     closeToTray: true,
     launchOnStartup: false,
-    startMinimized: false
+    startMinimized: false,
+    autoplay: true
   });
   lyrics = $state<LyricsData | null>(null);
   lyricsLoading = $state(false);
   lyricsTrackId = $state<string | null>(null);
   outputDevices = $state<string[]>([]);
   onboardingOpen = $state(false);
+  openedArtist = $state<ArtistData | null>(null);
+  loadingArtist = $state(false);
+  artistError = $state<string | null>(null);
 
   #lyricsCache = new Map<string, LyricsData | null>();
   #syncedAt = 0;
@@ -185,6 +192,45 @@ class PlayerStore {
   };
   search = (query: string) => invoke<Track[]>('yt_search', { query });
   searchPlaylists = (query: string) => invoke<PlaylistCard[]>('yt_search_playlists', { query });
+  startRadio = (track: Track) => invoke('player_start_radio', { track });
+  radio = (videoId: string) => invoke<Track[]>('yt_radio', { videoId });
+  moodCategories = () => invoke<MoodCategory[]>('yt_mood_categories');
+  moodPlaylists = (params: string) => invoke<PlaylistCard[]>('yt_mood_playlists', { params });
+  artistDetails = (browseId: string) => invoke<ArtistData>('yt_artist_details', { browseId });
+  artistSearch = (query: string) => invoke<ArtistCard | null>('yt_artist_search', { query });
+  appendQueue = (tracks: Track[]) => invoke('player_append_queue', { tracks });
+
+  openArtist = async (nameOrBrowseId: string) => {
+    const raw = nameOrBrowseId.trim();
+    if (!raw) return;
+    this.loadingArtist = true;
+    this.artistError = null;
+    this.openedArtist = null;
+    try {
+      let browseId = raw;
+      if (!browseId.startsWith('UC')) {
+        const found = await this.artistSearch(browseId);
+        if (found) {
+          browseId = found.channelId;
+        } else {
+          this.artistError = `"${nameOrBrowseId}" için sanatçı profili bulunamadı.`;
+          return;
+        }
+      }
+      const data = await this.artistDetails(browseId);
+      this.openedArtist = data;
+    } catch (e) {
+      this.artistError = `Sanatçı bilgisi alınamadı: ${e}`;
+    } finally {
+      this.loadingArtist = false;
+    }
+  };
+
+  closeArtist = () => {
+    this.openedArtist = null;
+    this.artistError = null;
+  };
+
   home = () => invoke<Track[]>('yt_home');
   homePlaylists = () => invoke<PlaylistCard[]>('yt_home_playlists');
   playlistTracks = (playlistId: string) => invoke<Track[]>('yt_playlist_tracks', { playlistId });

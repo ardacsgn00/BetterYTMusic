@@ -7,7 +7,10 @@ use std::time::Duration;
 use tauri::webview::PageLoadEvent;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
-use crate::innertube::{AuthStatus, Innertube, LyricsData, PlaylistCard, UpdateCheckResult};
+use crate::innertube::{
+    ArtistCard, ArtistData, AuthStatus, Innertube, LyricsData, MoodCategory, PlaylistCard,
+    UpdateCheckResult,
+};
 use crate::mock::Track;
 use crate::player::{PlayerController, PlayerSnapshot};
 use crate::settings::{AppSettings, SettingsManager};
@@ -118,6 +121,77 @@ pub fn player_play_track(
             }
         });
     }
+}
+
+#[tauri::command]
+pub async fn player_start_radio(
+    ctrl: Ctrl<'_>,
+    app: AppHandle,
+    yt: Yt<'_>,
+    track: Track,
+) -> Result<(), String> {
+    let video_id = track.id.clone();
+    let source_title = format!("Radyo: {}", track.title);
+    ctrl.with(&app, |p| {
+        p.set_queue(vec![track.clone()], 0, Some(source_title));
+    });
+    let yt = yt.inner().clone();
+    tauri::async_runtime::spawn(async move {
+        if let Ok(radio) = yt.radio_queue(&video_id) {
+            let ctrl = app.state::<PlayerController>();
+            ctrl.with(&app, |p| {
+                p.append_unique(radio);
+            });
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+pub fn player_append_queue(ctrl: Ctrl<'_>, app: AppHandle, tracks: Vec<Track>) {
+    ctrl.with(&app, |p| {
+        p.append_unique(tracks);
+    });
+}
+
+#[tauri::command]
+pub async fn yt_radio(yt: Yt<'_>, video_id: String) -> Result<Vec<Track>, String> {
+    let yt = yt.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || yt.radio_queue(&video_id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn yt_mood_categories(yt: Yt<'_>) -> Result<Vec<MoodCategory>, String> {
+    let yt = yt.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || yt.mood_categories())
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn yt_mood_playlists(yt: Yt<'_>, params: String) -> Result<Vec<PlaylistCard>, String> {
+    let yt = yt.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || yt.mood_playlists(&params))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn yt_artist_details(yt: Yt<'_>, browse_id: String) -> Result<ArtistData, String> {
+    let yt = yt.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || yt.artist_details(&browse_id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn yt_artist_search(yt: Yt<'_>, query: String) -> Result<Option<ArtistCard>, String> {
+    let yt = yt.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || yt.search_artist(&query))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

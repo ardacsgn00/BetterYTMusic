@@ -7,7 +7,7 @@
 **Hafif, hızlı ve kişiselleştirilebilir masaüstü YouTube Music istemcisi**  
 *Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API*
 
-[![Version](https://img.shields.io/badge/version-v0.17.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Version](https://img.shields.io/badge/version-v0.18.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Built with Tauri](https://img.shields.io/badge/Tauri_2-Rust_%2B_Svelte_5-06d6a0?style=for-the-badge)](https://tauri.app)
 [![Developer](https://img.shields.io/badge/Geli%C5%9Ftirici-Arda_Co%C5%9Fgun-8338ec?style=for-the-badge)](https://github.com/ardacsgn00)
@@ -21,7 +21,11 @@
 - **🦀 Doğrudan Rust Ses Motoru (`rodio` + `symphonia`):** Tarayıcı sekmesi veya ağır Electron katmanı olmadan, düşük RAM ve CPU kullanımıyla yerel AAC/M4A ses çözme ve paket düzeyinde milisaniyelik ileri-geri sarma (seek).
 - **🎵 YouTube Music & Google Hesabı Entegrasyonu:**
   - Google hesabınla güvenli giriş yapıp kişisel **Süpermix'im**, **Arşivden Şarkılar**, kişisel çalma listelerin ve **Beğenilen Şarkılar** kitaplığına anında erişim.
-  - Şarkı veya liste seçildiğinde otomatik **Radyo / Kuyruk** oluşturma ve **Karışık Çal (Shuffle)** / **Tekrar (Repeat)** modları.
+  - **Şarkı & Sanatçı Radyosu:** Herhangi bir şarkı veya sanatçıdan tek tıkla benzer müzik akışı başlatma.
+  - **Sonsuz Otomatik Çalma (Autoplay):** Sıradaki parçalar bittiğinde YouTube Music üzerinden proaktif kuyruk beslemesiyle kesintisiz müzik dinleme.
+  - **Ruh Hali & Tür Filtreleri (Moods & Genres):** Ana sayfada odaklanma, enerji, rahatlama, parti vb. tür ve ruh haline özel çalma listelerini filtreleme ve keşfetme.
+  - **Sanatçı Sayfası & Diskografi:** Sanatçı biyografisi, popüler şarkılar, albümler, single'lar ve benzer sanatçılar arasında gezinme.
+  - Otomatik **Radyo / Kuyruk** oluşturma ve **Karışık Çal (Shuffle)** / **Tekrar (Repeat)** modları.
 - **🎤 Senkronize Şarkı Sözleri (Lyrics):**
   - Saniyeye duyarlı (`LRC`) otomatik kayan şarkı sözleri ve herhangi bir söz satırına tıklayarak şarkıyı doğrudan o saniyeye sarabilme.
   - Geniş ekranlarda **Kapak | Şarkı Sözleri | Sıradaki** şeklinde 3 sütunlu yan yana görünüm desteği.

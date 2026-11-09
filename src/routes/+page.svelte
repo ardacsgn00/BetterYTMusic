@@ -11,6 +11,8 @@
   import LibraryView from '#lib/components/LibraryView.svelte';
   import OnboardingModal from '#lib/components/OnboardingModal.svelte';
   import MiniPlayer from '#lib/components/MiniPlayer.svelte';
+  import ArtistView from '#lib/components/ArtistView.svelte';
+  import Icon from '#lib/components/Icon.svelte';
   import { mini } from '#lib/mini.svelte.ts';
   import { player } from '#lib/player.svelte.ts';
   import { theme } from '#lib/theme.svelte.ts';
@@ -22,6 +24,7 @@
   let draggingHandle = $state<'2col' | '3left' | '3right' | null>(null);
 
   function selectView(v: View) {
+    player.closeArtist();
     view = v;
     if (v !== 'theme') {
       theme.setLastView(v);
@@ -126,7 +129,22 @@
   <Sidebar active={view} onselect={selectView} />
 
   <main style:zoom={`${theme.zoom}%`}>
-    {#if view === 'now'}
+    {#if player.openedArtist}
+      <ArtistView
+        artist={player.openedArtist}
+        onclose={() => player.closeArtist()}
+      />
+    {:else if player.loadingArtist}
+      <div class="card artist-loading-box">
+        <Icon name="user" size={36} />
+        <p class="muted">Sanatçı profili ve diskografisi yükleniyor...</p>
+      </div>
+    {:else if player.artistError}
+      <div class="card artist-loading-box error">
+        <p>{player.artistError}</p>
+        <button class="btn accent" onclick={() => player.closeArtist()}>Geri Dön</button>
+      </div>
+    {:else if view === 'now'}
       <div
         class="now-grid"
         class:three-col={threeCol}
@@ -274,6 +292,22 @@
   .splitter.active .grip {
     background: var(--accent);
     height: 64px;
+  }
+
+  .artist-loading-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 60px 24px;
+    margin: auto;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .artist-loading-box.error {
+    color: var(--danger, #ff4c4c);
   }
 
   @media (max-width: 1120px) {

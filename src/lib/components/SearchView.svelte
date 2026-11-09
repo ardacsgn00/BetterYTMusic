@@ -3,7 +3,7 @@
   import { player } from '#lib/player.svelte.ts';
   import { library } from '#lib/library.svelte.ts';
   import { formatTime } from '#lib/format.ts';
-  import type { Track, PlaylistCard } from '#lib/types.ts';
+  import type { Track, PlaylistCard, ArtistCard } from '#lib/types.ts';
   import Cover from './Cover.svelte';
   import Icon from './Icon.svelte';
 
@@ -13,6 +13,7 @@
   let activeTab = $state<SearchTab>('all');
   let songResults = $state<Track[]>([]);
   let playlistResults = $state<PlaylistCard[]>([]);
+  let artistResult = $state<ArtistCard | null>(null);
   let loading = $state(false);
   let error = $state<string | null>(null);
   let searched = $state(false);
@@ -60,13 +61,15 @@
     openedPlaylist = null;
 
     try {
-      const [songsRes, listsRes] = await Promise.allSettled([
+      const [songsRes, listsRes, artistRes] = await Promise.allSettled([
         player.search(trimmed),
-        player.searchPlaylists(trimmed)
+        player.searchPlaylists(trimmed),
+        player.artistSearch(trimmed)
       ]);
 
       songResults = songsRes.status === 'fulfilled' ? songsRes.value : [];
       playlistResults = listsRes.status === 'fulfilled' ? listsRes.value : [];
+      artistResult = artistRes.status === 'fulfilled' ? artistRes.value : null;
 
       if (songsRes.status === 'rejected' && listsRes.status === 'rejected') {
         error = 'Arama sonuçları alınamadı. Lütfen internet bağlantınızı kontrol edin.';
@@ -82,6 +85,7 @@
     query = '';
     songResults = [];
     playlistResults = [];
+    artistResult = null;
     searched = false;
     error = null;
     openedPlaylist = null;
@@ -246,16 +250,41 @@
               {@const liked = library.isFavorite(track.id)}
               <li class="pl-track-row" class:active>
                 <span class="t-idx muted">{idx + 1}</span>
-                <button
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div
                   class="pl-track-hit"
                   onclick={() => player.playTrack(track, openedTracks, openedPlaylist?.title)}
                 >
                   <Cover {track} size="40px" radius="calc(var(--radius) * 0.5)" />
                   <span class="t-meta">
                     <span class="t-name truncate">{track.title}</span>
-                    <span class="t-artist truncate muted">{track.artist}{track.album ? ` · ${track.album}` : ''}</span>
+                    <span class="t-artist truncate muted">
+                      <button
+                        type="button"
+                        class="artist-inline-btn"
+                        title="{track.artist} Sanatçı Sayfasını Aç"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          player.openArtist(track.artist);
+                        }}
+                      >
+                        {track.artist}
+                      </button>
+                      {#if track.album}
+                        <span class="album-tag"> · {track.album}</span>
+                      {/if}
+                    </span>
                   </span>
                   <span class="t-dur muted">{track.durationMs ? formatTime(track.durationMs) : ''}</span>
+                </div>
+                <button
+                  class="btn ghost icon pl-radio"
+                  title="Şarkı Radyosu Başlat"
+                  aria-label="Şarkı Radyosu Başlat"
+                  onclick={() => player.startRadio(track)}
+                >
+                  <Icon name="radio" size={16} />
                 </button>
                 <button
                   class="btn ghost icon fav"
@@ -303,6 +332,32 @@
         Çalma Listeleri & Albümler ({playlistResults.length})
       </button>
     </div>
+
+    {#if artistResult}
+      <div class="card artist-banner">
+        <div class="ab-avatar">
+          {#if artistResult.thumbnail}
+            <img src={artistResult.thumbnail} alt={artistResult.name} draggable="false" />
+          {:else}
+            <Icon name="user" size={32} />
+          {/if}
+        </div>
+        <div class="ab-info">
+          <span class="badge">SANATÇI</span>
+          <h2 class="ab-name">{artistResult.name}</h2>
+          {#if artistResult.subscribers}
+            <span class="ab-subs muted">{artistResult.subscribers}</span>
+          {/if}
+        </div>
+        <button
+          class="btn accent ab-btn"
+          onclick={() => player.openArtist(artistResult!.channelId)}
+        >
+          <Icon name="user" size={16} />
+          Sanatçı Sayfasını Aç
+        </button>
+      </div>
+    {/if}
 
     {#if error}
       <div class="card msg error">
@@ -383,15 +438,38 @@
                 {@const active = player.state.track?.id === track.id}
                 {@const liked = library.isFavorite(track.id)}
                 <li class="row" class:active>
-                  <button class="main-hit" onclick={() => player.playTrack(track, songResults, `Arama: ${query}`)}>
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div class="main-hit" onclick={() => player.playTrack(track, songResults, `Arama: ${query}`)}>
                     <Cover {track} size="46px" radius="var(--radius-sm)" />
                     <span class="info">
                       <span class="t truncate">{track.title}</span>
                       <span class="a truncate muted">
-                        {track.artist}{track.album ? ` · ${track.album}` : ''}
+                        <button
+                          type="button"
+                          class="artist-inline-btn"
+                          title="{track.artist} Sanatçı Sayfasını Aç"
+                          onclick={(e) => {
+                            e.stopPropagation();
+                            player.openArtist(track.artist);
+                          }}
+                        >
+                          {track.artist}
+                        </button>
+                        {#if track.album}
+                          <span class="album-tag"> · {track.album}</span>
+                        {/if}
                       </span>
                     </span>
                     <span class="dur muted">{track.durationMs ? formatTime(track.durationMs) : ''}</span>
+                  </div>
+                  <button
+                    class="btn ghost icon s-radio"
+                    title="Şarkı Radyosu Başlat"
+                    aria-label="Şarkı Radyosu Başlat"
+                    onclick={() => player.startRadio(track)}
+                  >
+                    <Icon name="radio" size={17} />
                   </button>
                   <button
                     class="btn ghost icon fav"
@@ -915,6 +993,70 @@
   }
   .msg.error {
     color: var(--accent);
+  }
+
+  .artist-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    margin-bottom: 6px;
+    border-color: var(--accent);
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .ab-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--surface-2);
+    border: 2px solid var(--border);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .ab-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .ab-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+  .ab-name {
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .ab-subs {
+    font-size: 12px;
+  }
+  .ab-btn {
+    flex-shrink: 0;
+  }
+  .s-radio,
+  .pl-radio {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+  .artist-inline-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    display: inline;
+    transition: color 100ms ease;
+  }
+  .artist-inline-btn:hover {
+    color: var(--accent);
+    text-decoration: underline;
   }
 
   @media (max-width: 768px) {

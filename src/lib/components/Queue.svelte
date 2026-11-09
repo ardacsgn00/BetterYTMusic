@@ -86,8 +86,10 @@
   {:else}
     <ol>
       {#each queue as track, i (`${track.id}-${i}`)}
-        <li>
-          <button class="row" class:active={i === current} onclick={() => player.playIndex(i)}>
+        <li class="q-item" class:active={i === current}>
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="row" onclick={() => player.playIndex(i)}>
             <span class="idx">
               {#if i === current && player.state.isPlaying}
                 <span class="eq" aria-label="Çalıyor"><i></i><i></i><i></i></span>
@@ -98,9 +100,29 @@
             <Cover {track} size="44px" radius="var(--radius-sm)" />
             <span class="info">
               <span class="t truncate">{track.title}</span>
-              <span class="a truncate muted">{track.artist}</span>
+              <span class="a truncate muted">
+                <button
+                  type="button"
+                  class="artist-inline-btn"
+                  title="{track.artist} Sanatçı Sayfasını Aç"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    player.openArtist(track.artist);
+                  }}
+                >
+                  {track.artist}
+                </button>
+              </span>
             </span>
             <span class="dur muted">{formatTime(track.durationMs)}</span>
+          </div>
+          <button
+            class="btn ghost icon q-radio-btn"
+            title="Şarkı Radyosu Başlat"
+            aria-label="Şarkı Radyosu Başlat"
+            onclick={() => player.startRadio(track)}
+          >
+            <Icon name="radio" size={15} />
           </button>
         </li>
       {/each}
@@ -213,6 +235,54 @@
     overflow-y: auto;
     flex: 1;
   }
+  .q-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: var(--radius);
+    padding-right: 6px;
+    border: 2px solid transparent;
+  }
+  .q-item:hover {
+    background: var(--surface-2);
+  }
+  .q-item.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .q-item .row {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+  }
+  .q-radio-btn {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  .q-item:hover .q-radio-btn,
+  .q-radio-btn:focus-visible {
+    opacity: 1;
+  }
+  .artist-inline-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    display: inline;
+    transition: color 100ms ease;
+  }
+  .artist-inline-btn:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
   .row {
     width: 100%;
     display: grid;
@@ -226,14 +296,7 @@
     cursor: pointer;
     text-align: left;
   }
-  .row:hover {
-    background: var(--surface-2);
-  }
-  .row.active {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-  }
-  .row.active .t {
+  .q-item.active .t {
     color: var(--accent);
   }
   .idx {

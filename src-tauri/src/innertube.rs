@@ -35,6 +35,8 @@ const FEATURED_PLAYLISTS_FILTER_PARAM: &str = "EgeKAQQoADgBahIQDhAFEAMQChAJEAQQF
 const COMMUNITY_PLAYLISTS_FILTER_PARAM: &str = "EgeKAQQoAEABahIQDhAFEAMQChAJEAQQFRAQEBE%3D";
 /// Filter param for "Albums" in YouTube Music search.
 const ALBUMS_FILTER_PARAM: &str = "EgWKAQIYAWoSEA4QBRADEAoQCRAEEBUQEBAR";
+/// Filter param for "Artists" in YouTube Music search.
+const ARTISTS_FILTER_PARAM: &str = "EgWKAQIgAWoSEA4QBRADEAoQCRAEEBUQEBAR";
 
 const PALETTE: &[&str] = &[
     "#e4572e", "#3a86ff", "#8338ec", "#ffbe0b", "#06d6a0", "#ef476f", "#118ab2", "#f4a261",
@@ -62,6 +64,38 @@ pub struct PlaylistCard {
     pub subtitle: String,
     pub thumbnail: Option<String>,
     pub color: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MoodCategory {
+    pub title: String,
+    pub params: String,
+    pub color: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistCard {
+    pub channel_id: String,
+    pub name: String,
+    pub subscribers: Option<String>,
+    pub thumbnail: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistData {
+    pub channel_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub subscribers: Option<String>,
+    pub monthly_listeners: Option<String>,
+    pub thumbnail: Option<String>,
+    pub top_tracks: Vec<Track>,
+    pub albums: Vec<PlaylistCard>,
+    pub singles: Vec<PlaylistCard>,
+    pub similar_artists: Vec<ArtistCard>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -532,6 +566,99 @@ impl Innertube {
         });
 
         Ok(out)
+    }
+
+    /// Fetch all Moods and Genres from `FEmusic_moods_and_genres`.
+    pub fn mood_categories(&self) -> Result<Vec<MoodCategory>, String> {
+        let body = json!({
+            "context": web_remix_context(),
+            "browseId": "FEmusic_moods_and_genres"
+        });
+
+        let val: Value = self
+            .authed_post("https://music.youtube.com/youtubei/v1/browse?prettyPrint=false")
+            .send_json(body)
+            .map_err(|e| format!("Kategori isteği başarısız: {e}"))?
+            .into_json()
+            .map_err(|e| format!("Kategori yanıtı okunamadı: {e}"))?;
+
+        self.save_visitor_data(&val);
+
+        let mut out = Vec::new();
+        collect_mood_categories(&val, &mut out);
+        Ok(out)
+    }
+
+    /// Fetch playlists belonging to a specific mood/genre category.
+    pub fn mood_playlists(&self, params: &str) -> Result<Vec<PlaylistCard>, String> {
+        let body = json!({
+            "context": web_remix_context(),
+            "browseId": "FEmusic_moods_and_genres_category",
+            "params": params
+        });
+
+        let val: Value = self
+            .authed_post("https://music.youtube.com/youtubei/v1/browse?prettyPrint=false")
+            .send_json(body)
+            .map_err(|e| format!("Kategori içeriği isteği başarısız: {e}"))?
+            .into_json()
+            .map_err(|e| format!("Kategori içeriği yanıtı okunamadı: {e}"))?;
+
+        self.save_visitor_data(&val);
+
+        let mut out = Vec::new();
+        collect_playlist_cards(&val, &mut out);
+        Ok(out)
+    }
+
+    /// Search for an artist channel browseId by name.
+    pub fn search_artist(&self, query: &str) -> Result<Option<ArtistCard>, String> {
+        let q = query.trim();
+        if q.is_empty() {
+            return Ok(None);
+        }
+        let body = json!({
+            "context": web_remix_context(),
+            "query": q,
+            "params": ARTISTS_FILTER_PARAM
+        });
+
+        let val: Value = self
+            .authed_post("https://music.youtube.com/youtubei/v1/search?prettyPrint=false")
+            .send_json(body)
+            .map_err(|e| format!("Sanatçı arama isteği başarısız: {e}"))?
+            .into_json()
+            .map_err(|e| format!("Sanatçı arama yanıtı okunamadı: {e}"))?;
+
+        self.save_visitor_data(&val);
+
+        let mut artists = Vec::new();
+        collect_artist_cards(&val, &mut artists);
+        Ok(artists.into_iter().next())
+    }
+
+    /// Fetch artist discography, top tracks, albums, singles, and similar artists.
+    pub fn artist_details(&self, browse_id: &str) -> Result<ArtistData, String> {
+        let bid = browse_id.trim();
+        if bid.is_empty() {
+            return Err("Geçersiz sanatçı kimliği".to_string());
+        }
+
+        let body = json!({
+            "context": web_remix_context(),
+            "browseId": bid
+        });
+
+        let val: Value = self
+            .authed_post("https://music.youtube.com/youtubei/v1/browse?prettyPrint=false")
+            .send_json(body)
+            .map_err(|e| format!("Sanatçı sayfası isteği başarısız: {e}"))?
+            .into_json()
+            .map_err(|e| format!("Sanatçı sayfası yanıtı okunamadı: {e}"))?;
+
+        self.save_visitor_data(&val);
+
+        parse_artist_data(bid, &val)
     }
 
     /// Fetch time-synced LRC lyrics from LRCLIB (`lrclib.net`), falling back to plain lyrics
@@ -1629,6 +1756,263 @@ fn extract_description_shelf_text(v: &Value) -> Option<String> {
             None
         }
         _ => None,
+    }
+}
+
+fn collect_mood_categories(v: &Value, out: &mut Vec<MoodCategory>) {
+    match v {
+        Value::Object(map) => {
+            if let Some(btn) = map.get("musicNavigationButtonRenderer") {
+                if let Some(cat) = parse_mood_category(btn) {
+                    if !out.iter().any(|x| x.params == cat.params || x.title == cat.title) {
+                        out.push(cat);
+                    }
+                }
+            }
+            for child in map.values() {
+                collect_mood_categories(child, out);
+            }
+        }
+        Value::Array(arr) => {
+            for child in arr {
+                collect_mood_categories(child, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn parse_mood_category(btn: &Value) -> Option<MoodCategory> {
+    let title = btn.pointer("/buttonText/runs/0/text")
+        .and_then(Value::as_str)?
+        .trim();
+    if title.is_empty() {
+        return None;
+    }
+    let params = btn.pointer("/clickCommand/browseEndpoint/params")
+        .and_then(Value::as_str)?
+        .trim();
+    if params.is_empty() {
+        return None;
+    }
+    let color = color_for_id(title);
+    Some(MoodCategory {
+        title: title.to_string(),
+        params: params.to_string(),
+        color,
+    })
+}
+
+fn parse_artist_card_two_row(item: &Value) -> Option<ArtistCard> {
+    let browse_id = item
+        .pointer("/navigationEndpoint/browseEndpoint/browseId")
+        .and_then(Value::as_str)?;
+    if !browse_id.starts_with("UC") {
+        return None;
+    }
+    let name = item
+        .pointer("/title/runs/0/text")
+        .and_then(Value::as_str)?
+        .trim();
+    if name.is_empty() {
+        return None;
+    }
+    let subscribers = item
+        .pointer("/subtitle/runs")
+        .and_then(Value::as_array)
+        .map(|runs| {
+            runs.iter()
+                .filter_map(|r| r.get("text").and_then(Value::as_str))
+                .collect::<String>()
+        });
+    let thumbnail = item
+        .pointer("/thumbnailRenderer/musicThumbnailRenderer/thumbnail/thumbnails")
+        .and_then(Value::as_array)
+        .and_then(|a| a.last())
+        .and_then(|t| t.get("url"))
+        .and_then(Value::as_str)
+        .map(upscale_thumb);
+
+    Some(ArtistCard {
+        channel_id: browse_id.to_string(),
+        name: name.to_string(),
+        subscribers,
+        thumbnail,
+    })
+}
+
+fn parse_artist_card_responsive(item: &Value) -> Option<ArtistCard> {
+    let flex_col_0 = item.pointer("/flexColumns/0/musicResponsiveListItemFlexColumnRenderer")?;
+    let name = flex_col_0
+        .pointer("/text/runs/0/text")
+        .and_then(Value::as_str)?
+        .trim();
+    if name.is_empty() {
+        return None;
+    }
+
+    let nav = flex_col_0
+        .pointer("/text/runs/0/navigationEndpoint")
+        .or_else(|| item.get("navigationEndpoint"))?;
+
+    let browse_id = nav
+        .pointer("/browseEndpoint/browseId")
+        .and_then(Value::as_str)?;
+    if !browse_id.starts_with("UC") {
+        return None;
+    }
+
+    let subscribers = item
+        .pointer("/flexColumns/1/musicResponsiveListItemFlexColumnRenderer/text/runs")
+        .and_then(Value::as_array)
+        .map(|runs| {
+            runs.iter()
+                .filter_map(|r| r.get("text").and_then(Value::as_str))
+                .collect::<String>()
+        });
+
+    let thumbnail = item
+        .pointer("/thumbnail/musicThumbnailRenderer/thumbnail/thumbnails")
+        .and_then(Value::as_array)
+        .and_then(|a| a.last())
+        .and_then(|t| t.get("url"))
+        .and_then(Value::as_str)
+        .map(upscale_thumb);
+
+    Some(ArtistCard {
+        channel_id: browse_id.to_string(),
+        name: name.to_string(),
+        subscribers,
+        thumbnail,
+    })
+}
+
+fn collect_artist_cards(v: &Value, out: &mut Vec<ArtistCard>) {
+    match v {
+        Value::Object(map) => {
+            if let Some(item) = map.get("musicTwoRowItemRenderer") {
+                if let Some(card) = parse_artist_card_two_row(item) {
+                    if !out.iter().any(|x| x.channel_id == card.channel_id) {
+                        out.push(card);
+                    }
+                }
+            } else if let Some(item) = map.get("musicResponsiveListItemRenderer") {
+                if let Some(card) = parse_artist_card_responsive(item) {
+                    if !out.iter().any(|x| x.channel_id == card.channel_id) {
+                        out.push(card);
+                    }
+                }
+            }
+            for child in map.values() {
+                collect_artist_cards(child, out);
+            }
+        }
+        Value::Array(arr) => {
+            for child in arr {
+                collect_artist_cards(child, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn parse_artist_data(channel_id: &str, val: &Value) -> Result<ArtistData, String> {
+    let header = val
+        .pointer("/header/musicImmersiveHeaderRenderer")
+        .or_else(|| val.pointer("/header/musicVisualHeaderRenderer"));
+
+    let name = header
+        .and_then(|h| h.pointer("/title/runs/0/text"))
+        .and_then(Value::as_str)
+        .unwrap_or("Sanatçı")
+        .to_string();
+
+    let description = header
+        .and_then(|h| h.pointer("/description/runs/0/text"))
+        .and_then(Value::as_str)
+        .map(|s| s.to_string());
+
+    let subscribers = header
+        .and_then(|h| h.pointer("/subscriptionButton/subscribeButtonRenderer/subscriberCountText/runs/0/text"))
+        .and_then(Value::as_str)
+        .map(|s| s.to_string());
+
+    let monthly_listeners = header
+        .and_then(|h| h.pointer("/monthlyListenerCount/runs/0/text"))
+        .and_then(Value::as_str)
+        .map(|s| s.to_string());
+
+    let thumbnail = header
+        .and_then(|h| h.pointer("/thumbnail/musicThumbnailRenderer/thumbnail/thumbnails"))
+        .and_then(Value::as_array)
+        .and_then(|a| a.last())
+        .and_then(|t| t.get("url"))
+        .and_then(Value::as_str)
+        .map(upscale_thumb);
+
+    let mut top_tracks = Vec::new();
+    let mut albums = Vec::new();
+    let mut singles = Vec::new();
+    let mut similar_artists = Vec::new();
+
+    let mut shelves = Vec::new();
+    collect_raw_shelves(val, &mut shelves);
+
+    for (title, shelf_val) in shelves {
+        let t_lower = title.to_lowercase();
+        if t_lower.contains("şarkı") || t_lower.contains("songs") || t_lower.contains("tracks") {
+            collect_responsive_items(&shelf_val, &mut top_tracks);
+        } else if t_lower.contains("albüm") || t_lower.contains("albums") {
+            collect_playlist_cards(&shelf_val, &mut albums);
+        } else if t_lower.contains("single") || t_lower.contains("ep") {
+            collect_playlist_cards(&shelf_val, &mut singles);
+        } else if t_lower.contains("benzer") || t_lower.contains("similar") || t_lower.contains("fans might also like") {
+            collect_artist_cards(&shelf_val, &mut similar_artists);
+        }
+    }
+
+    Ok(ArtistData {
+        channel_id: channel_id.to_string(),
+        name,
+        description,
+        subscribers,
+        monthly_listeners,
+        thumbnail,
+        top_tracks,
+        albums,
+        singles,
+        similar_artists,
+    })
+}
+
+fn collect_raw_shelves(v: &Value, out: &mut Vec<(String, Value)>) {
+    match v {
+        Value::Object(map) => {
+            if let Some(shelf) = map.get("musicShelfRenderer") {
+                let title = shelf
+                    .pointer("/title/runs/0/text")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+                out.push((title, shelf.clone()));
+            } else if let Some(shelf) = map.get("musicCarouselShelfRenderer") {
+                let title = shelf
+                    .pointer("/header/musicCarouselShelfBasicHeaderRenderer/title/runs/0/text")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+                out.push((title, shelf.clone()));
+            }
+            for child in map.values() {
+                collect_raw_shelves(child, out);
+            }
+        }
+        Value::Array(arr) => {
+            for child in arr {
+                collect_raw_shelves(child, out);
+            }
+        }
+        _ => {}
     }
 }
 

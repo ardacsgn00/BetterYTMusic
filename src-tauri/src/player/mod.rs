@@ -261,10 +261,12 @@ impl Player {
 /// Every mutation goes through [`PlayerController::with`], which re-broadcasts
 /// state to the webview and the OS media controls.
 pub struct PlayerController {
+    innertube: Arc<Innertube>,
     player: Mutex<Player>,
     media: Mutex<Option<MediaSender>>,
     taskbar: Mutex<Option<TaskbarHandle>>,
     last_track_id: Mutex<Option<String>>,
+    last_autoplay_id: Mutex<Option<String>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -274,10 +276,12 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 impl PlayerController {
     pub fn new(innertube: Arc<Innertube>, queue: Vec<Track>) -> Self {
         Self {
+            innertube: innertube.clone(),
             player: Mutex::new(Player::new(Box::new(RodioEngine::new(innertube)), queue)),
             media: Mutex::new(None),
             taskbar: Mutex::new(None),
             last_track_id: Mutex::new(None),
+            last_autoplay_id: Mutex::new(None),
         }
     }
 
@@ -342,11 +346,12 @@ impl PlayerController {
 
     /// Detects natural end-of-track and advances the queue, and updates duration if newly decoded.
     fn tick(&self, app: &AppHandle) {
-        let (ended, dur_changed) = {
+        let (ended, dur_changed, needs_autoplay_id) = {
             let mut p = lock(&self.player);
             let ended = p.engine.is_playing() && p.engine.is_finished();
             let eng_dur = p.engine.duration_ms();
             let mut dur_changed = false;
+            let mut needs_autoplay_id = None;
             if let Some(idx) = p.index {
                 if let Some(t) = p.queue.get_mut(idx) {
                     if eng_dur > 0 && t.duration_ms != eng_dur {
@@ -354,9 +359,38 @@ impl PlayerController {
                         dur_changed = true;
                     }
                 }
+                // Proactively trigger autoplay when on the last track of queue
+                if p.repeat == RepeatMode::Off && idx + 1 >= p.queue.len() && (ended || p.engine.is_playing()) {
+                    needs_autoplay_id = Some(p.queue[idx].id.clone());
+                }
             }
-            (ended, dur_changed)
+            (ended, dur_changed, needs_autoplay_id)
         };
+
+        if let Some(vid) = needs_autoplay_id {
+            let autoplay = app
+                .try_state::<Arc<crate::settings::SettingsManager>>()
+                .map(|s| s.get().autoplay)
+                .unwrap_or(true);
+
+            if autoplay {
+                let mut last_ap = lock(&self.last_autoplay_id);
+                if *last_ap != Some(vid.clone()) {
+                    *last_ap = Some(vid.clone());
+                    let yt = self.innertube.clone();
+                    let app_clone = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Ok(radio) = yt.radio_queue(&vid) {
+                            let ctrl = app_clone.state::<PlayerController>();
+                            ctrl.with(&app_clone, |p| {
+                                p.append_unique(radio);
+                            });
+                        }
+                    });
+                }
+            }
+        }
+
         if ended {
             self.with(app, |p| p.on_track_end());
         } else if dur_changed {

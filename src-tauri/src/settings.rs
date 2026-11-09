@@ -6,12 +6,18 @@ use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub close_to_tray: bool,
     pub launch_on_startup: bool,
     pub start_minimized: bool,
+    #[serde(default = "default_true")]
+    pub autoplay: bool,
 }
 
 impl Default for AppSettings {
@@ -20,6 +26,7 @@ impl Default for AppSettings {
             close_to_tray: true,
             launch_on_startup: false,
             start_minimized: false,
+            autoplay: true,
         }
     }
 }

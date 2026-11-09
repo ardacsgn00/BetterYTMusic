@@ -4,12 +4,17 @@
   import { library } from '#lib/library.svelte.ts';
   import { theme } from '#lib/theme.svelte.ts';
   import { formatTime } from '#lib/format.ts';
-  import type { PlaylistCard, Track } from '#lib/types.ts';
+  import type { MoodCategory, PlaylistCard, Track } from '#lib/types.ts';
   import Cover from './Cover.svelte';
   import Icon from './Icon.svelte';
 
   let tracks = $state<Track[]>([]);
   let playlists = $state<PlaylistCard[]>([]);
+  let moodCategories = $state<MoodCategory[]>([]);
+  let selectedMood = $state<MoodCategory | null>(null);
+  let moodPlaylists = $state<PlaylistCard[]>([]);
+  let loadingMood = $state(false);
+
   let openedPlaylist = $state<PlaylistCard | null>(null);
   let openedTracks = $state<Track[]>([]);
   let openingPlaylist = $state(false);
@@ -26,17 +31,41 @@
     loading = true;
     error = null;
     try {
-      const [homeTracks, homeLists] = await Promise.all([
+      const [homeTracks, homeLists, moods] = await Promise.all([
         player.home(),
-        player.homePlaylists().catch(() => [] as PlaylistCard[])
+        player.homePlaylists().catch(() => [] as PlaylistCard[]),
+        player.moodCategories().catch(() => [] as MoodCategory[])
       ]);
       tracks = homeTracks;
       playlists = homeLists;
+      moodCategories = moods;
     } catch (e) {
       error = String(e);
     } finally {
       loading = false;
     }
+  }
+
+  async function selectMoodCategory(cat: MoodCategory) {
+    if (selectedMood?.params === cat.params) {
+      selectedMood = null;
+      moodPlaylists = [];
+      return;
+    }
+    selectedMood = cat;
+    loadingMood = true;
+    try {
+      moodPlaylists = await player.moodPlaylists(cat.params);
+    } catch {
+      moodPlaylists = [];
+    } finally {
+      loadingMood = false;
+    }
+  }
+
+  function clearMoodCategory() {
+    selectedMood = null;
+    moodPlaylists = [];
   }
 
   /** Clicking the card body opens the playlist detail view so the user can browse all songs inside. */
@@ -160,7 +189,9 @@
             {@const active = player.state.track?.id === track.id}
             {@const liked = library.isFavorite(track.id)}
             <li class="pl-row" class:active>
-              <button
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
                 class="pl-hit"
                 onclick={() => player.playTrack(track, openedTracks, openedPlaylist?.title)}
               >
@@ -168,13 +199,34 @@
                 <Cover {track} size="46px" radius="var(--radius-sm)" />
                 <span class="q-info">
                   <span class="q-title truncate">{track.title}</span>
-                  <span class="q-artist truncate muted">
-                    {track.artist}{track.album ? ` · ${track.album}` : ''}
+                  <span class="q-artist-line truncate muted">
+                    <button
+                      type="button"
+                      class="artist-inline-btn"
+                      title="{track.artist} Sanatçı Sayfasını Aç"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        player.openArtist(track.artist);
+                      }}
+                    >
+                      {track.artist}
+                    </button>
+                    {#if track.album}
+                      <span class="album-tag"> · {track.album}</span>
+                    {/if}
                   </span>
                 </span>
                 <span class="q-dur muted">
                   {track.durationMs ? formatTime(track.durationMs) : ''}
                 </span>
+              </div>
+              <button
+                class="btn ghost icon pl-radio"
+                title="Şarkı Radyosu Başlat"
+                aria-label="Şarkı Radyosu Başlat"
+                onclick={() => player.startRadio(track)}
+              >
+                <Icon name="radio" size={16} />
               </button>
               <button
                 class="btn ghost icon q-fav"
@@ -264,6 +316,95 @@
       </div>
     </header>
 
+    {#if moodCategories.length > 0}
+      <div class="mood-bar">
+        <div class="mood-bar-title muted">
+          <Icon name="sparkles" size={14} />
+          <span>Ruh Hali & Türler</span>
+        </div>
+        <div class="mood-scroll">
+          {#each moodCategories as cat (cat.params)}
+            {@const isActive = selectedMood?.params === cat.params}
+            <button
+              type="button"
+              class="mood-chip"
+              class:active={isActive}
+              onclick={() => selectMoodCategory(cat)}
+            >
+              {cat.title}
+            </button>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
+    {#if selectedMood}
+      <div class="section mood-section card">
+        <div class="sec-head mood-sec-head">
+          <div class="mood-head-title">
+            <span class="badge">RUH HALİ & TÜR</span>
+            <h2>{selectedMood.title}</h2>
+            <span class="muted sec-sub">Özenle derlenmiş çalma listeleri ve miksler</span>
+          </div>
+          <button class="btn sm" onclick={clearMoodCategory}>
+            <Icon name="close" size={14} />
+            Filtreyi Temizle
+          </button>
+        </div>
+
+        {#if loadingMood}
+          <div class="card msg">
+            <p class="muted">"{selectedMood.title}" çalma listeleri yükleniyor...</p>
+          </div>
+        {:else if moodPlaylists.length > 0}
+          <div class="mix-grid">
+            {#each moodPlaylists as pl (pl.playlistId)}
+              {@const isPlayingThis = player.state.sourceName === pl.title}
+              {@const isBusy = playingPlaylistId === pl.playlistId}
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
+                class="card mix-card"
+                class:active={isPlayingThis}
+                onclick={() => openPlaylistView(pl)}
+              >
+                <div class="mix-art" style:background-color={pl.color}>
+                  {#if pl.thumbnail}
+                    <img src={pl.thumbnail} alt="" loading="lazy" draggable="false" />
+                  {:else}
+                    <div class="mix-badge-icon">
+                      <Icon name="now" size={28} />
+                    </div>
+                  {/if}
+                  <button
+                    type="button"
+                    class="mix-play-center"
+                    title={`${pl.title} listesini hemen oynat`}
+                    aria-label={`${pl.title} listesini hemen oynat`}
+                    disabled={isBusy}
+                    onclick={(e) => playPlaylistDirect(e, pl)}
+                  >
+                    <Icon name={isBusy ? 'refresh' : 'play'} size={20} />
+                  </button>
+                </div>
+                <div class="mix-info">
+                  <span class="mix-tag">{selectedMood.title.toUpperCase()}</span>
+                  <span class="mix-title truncate">{pl.title}</span>
+                  <span class="mix-sub truncate muted">
+                    {isBusy ? 'Başlatılıyor...' : pl.subtitle}
+                  </span>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="card msg">
+            <p class="muted">Bu kategori için parça listesi bulunamadı.</p>
+          </div>
+        {/if}
+      </div>
+    {/if}
+
     {#if error}
       <div class="card msg">
         <p>{error}</p>
@@ -284,7 +425,15 @@
             <span class="badge">ÖNE ÇIKAN SEÇİM</span>
             <h2 class="hero-title truncate">{featured.title}</h2>
             <p class="hero-meta muted truncate">
-              {featured.artist}{featured.album ? ` · ${featured.album}` : ''}
+              <button
+                type="button"
+                class="artist-inline-btn"
+                title="{featured.artist} Sanatçı Sayfasını Aç"
+                onclick={() => player.openArtist(featured.artist)}
+              >
+                {featured.artist}
+              </button>
+              {featured.album ? ` · ${featured.album}` : ''}
               {featured.durationMs ? ` · ${formatTime(featured.durationMs)}` : ''}
             </p>
             <div class="hero-btns">
@@ -297,8 +446,10 @@
               </button>
               <button
                 class="btn"
-                onclick={() => player.playTrack(featured, undefined, `${featured.title} Radyosu`)}
+                title="Şarkı Radyosu Başlat"
+                onclick={() => player.startRadio(featured)}
               >
+                <Icon name="radio" size={17} />
                 Radyo Başlat
               </button>
               <button
@@ -378,18 +529,38 @@
               {@const active = player.state.track?.id === track.id}
               {@const liked = library.isFavorite(track.id)}
               <div class="card quick-item" class:active>
-                <button
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div
                   class="quick-hit"
                   onclick={() => player.playTrack(track, tracks, 'Hızlı Seçimler')}
                 >
                   <Cover {track} size="52px" radius="var(--radius-sm)" />
                   <span class="q-info">
                     <span class="q-title truncate">{track.title}</span>
-                    <span class="q-artist truncate muted">{track.artist}</span>
+                    <button
+                      type="button"
+                      class="artist-inline-btn truncate muted"
+                      title="{track.artist} Sanatçı Sayfasını Aç"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        player.openArtist(track.artist);
+                      }}
+                    >
+                      {track.artist}
+                    </button>
                   </span>
                   <span class="q-dur muted">
                     {track.durationMs ? formatTime(track.durationMs) : ''}
                   </span>
+                </div>
+                <button
+                  class="btn ghost icon q-radio"
+                  title="Şarkı Radyosu Başlat"
+                  aria-label="Şarkı Radyosu Başlat"
+                  onclick={() => player.startRadio(track)}
+                >
+                  <Icon name="radio" size={16} />
                 </button>
                 <button
                   class="btn ghost icon q-fav"
@@ -416,7 +587,9 @@
               {@const active = player.state.track?.id === track.id}
               {@const liked = library.isFavorite(track.id)}
               <div class="card item" class:active>
-                <button
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div
                   class="card-hit"
                   onclick={() => player.playTrack(track, tracks, 'Ana Sayfa')}
                 >
@@ -427,7 +600,25 @@
                     </span>
                   </div>
                   <span class="t truncate">{track.title}</span>
-                  <span class="a truncate muted">{track.artist}</span>
+                  <button
+                    type="button"
+                    class="artist-inline-btn truncate muted"
+                    title="{track.artist} Sanatçı Sayfasını Aç"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      player.openArtist(track.artist);
+                    }}
+                  >
+                    {track.artist}
+                  </button>
+                </div>
+                <button
+                  class="btn ghost icon shelf-radio-btn"
+                  title="Şarkı Radyosu Başlat"
+                  aria-label="Şarkı Radyosu Başlat"
+                  onclick={() => player.startRadio(track)}
+                >
+                  <Icon name="radio" size={15} />
                 </button>
                 <button
                   class="btn ghost icon fav"
@@ -849,9 +1040,6 @@
   .pl-row.active .q-title {
     color: var(--accent);
   }
-  .q-artist {
-    font-size: 12px;
-  }
   .q-dur {
     font-size: 12px;
     font-variant-numeric: tabular-nums;
@@ -932,9 +1120,6 @@
     font-size: 14px;
     margin-top: 2px;
   }
-  .a {
-    font-size: 12px;
-  }
   .fav {
     position: absolute;
     top: 16px;
@@ -945,6 +1130,113 @@
     border-radius: 50%;
     background: var(--surface);
     border: 2px solid var(--border);
+  }
+  .shelf-radio-btn {
+    position: absolute;
+    top: 16px;
+    right: 54px;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  .item:hover .shelf-radio-btn,
+  .shelf-radio-btn:focus-visible {
+    opacity: 1;
+  }
+  .q-radio,
+  .pl-radio {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+  .artist-inline-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    display: inline;
+    transition: color 100ms ease;
+  }
+  .artist-inline-btn:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .mood-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .mood-bar-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .mood-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+  .mood-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    border: 2px solid var(--border);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+    transition: transform 70ms ease, background-color 100ms ease, border-color 100ms ease;
+  }
+  .mood-chip:hover {
+    background: var(--surface-3);
+    border-color: var(--accent);
+  }
+  .mood-chip:active {
+    transform: translateY(var(--edge-depth));
+    box-shadow: none;
+  }
+  .mood-chip.active {
+    background: var(--accent);
+    color: var(--on-accent);
+    border-color: var(--accent-edge);
+    box-shadow: 0 var(--edge-depth) 0 var(--accent-edge);
+  }
+  .mood-section {
+    padding: 16px;
+    border-color: var(--accent);
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .mood-sec-head {
+    margin-bottom: 8px;
+  }
+  .mood-head-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
   @media (max-width: 640px) {

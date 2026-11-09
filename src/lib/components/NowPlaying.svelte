@@ -25,10 +25,37 @@
         {/if}
       </div>
       <h1 class="title">{track.title}</h1>
-      <p class="artist">{track.artist}</p>
+      <p class="artist">
+        <button
+          type="button"
+          class="artist-btn"
+          title="{track.artist} Sanatçı Sayfasını Aç"
+          onclick={() => player.openArtist(track.artist)}
+        >
+          {track.artist}
+        </button>
+      </p>
       <p class="muted">
         {track.album ? `${track.album} · ` : ''}{formatTime(track.durationMs)}
       </p>
+      <div class="now-actions">
+        <button
+          class="btn now-action-btn"
+          title="Bu şarkıyla benzer parçalardan radyo başlat"
+          onclick={() => player.startRadio(track)}
+        >
+          <Icon name="radio" size={15} />
+          <span>Şarkı Radyosu</span>
+        </button>
+        <button
+          class="btn now-action-btn"
+          title="{track.artist} Sanatçı Sayfasını Aç"
+          onclick={() => player.openArtist(track.artist)}
+        >
+          <Icon name="user" size={15} />
+          <span>Sanatçı Profili</span>
+        </button>
+      </div>
     {:else}
       <h1 class="title">Kuyruk boş</h1>
       <p class="muted">Çalmak için bir şarkı seç.</p>
@@ -101,6 +128,33 @@
   .artist {
     font-size: 16px;
     font-weight: 600;
+  }
+  .artist-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 100ms ease;
+  }
+  .artist-btn:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .now-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .now-action-btn {
+    font-size: 12.5px;
+    padding: 6px 12px;
+    gap: 6px;
   }
 
   @media (max-width: 760px) {
