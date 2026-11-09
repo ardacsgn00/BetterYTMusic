@@ -23,35 +23,50 @@ use crate::mock::Track;
 
 /// Enumerate all available audio output device names on the host OS.
 pub fn list_output_devices() -> Vec<String> {
-    let host = rodio::cpal::default_host();
-    let mut out = Vec::new();
-    if let Ok(devices) = host.output_devices() {
-        for dev in devices {
-            if let Ok(name) = dev.name() {
-                let trimmed = name.trim().to_string();
-                if !trimmed.is_empty() && !out.contains(&trimmed) {
-                    out.push(trimmed);
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let host = rodio::cpal::default_host();
+        let mut out = Vec::new();
+        if let Ok(devices) = host.output_devices() {
+            for dev in devices {
+                if let Ok(name) = dev.name() {
+                    let trimmed = name.trim().to_string();
+                    if !trimmed.is_empty() && !out.contains(&trimmed) {
+                        out.push(trimmed);
+                    }
                 }
             }
         }
-    }
-    out
+        out
+    }))
+    .unwrap_or_default()
 }
 
 fn open_output_stream(
     device_name: Option<&str>,
 ) -> Option<(OutputStream, rodio::OutputStreamHandle)> {
-    if let Some(target) = device_name.map(|s| s.trim()).filter(|s| !s.is_empty()) {
-        let host = rodio::cpal::default_host();
-        if let Ok(mut devices) = host.output_devices() {
-            if let Some(dev) = devices.find(|d| d.name().ok().as_deref().map(str::trim) == Some(target)) {
-                if let Ok(pair) = OutputStream::try_from_device(&dev) {
-                    return Some(pair);
+    let target = device_name.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        if let Some(target_name) = target {
+            if let Ok(Ok(mut devices)) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                rodio::cpal::default_host().output_devices()
+            })) {
+                if let Some(dev) = devices.find(|d| d.name().ok().as_deref().map(str::trim) == Some(&target_name)) {
+                    if let Ok(Ok(pair)) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        OutputStream::try_from_device(&dev)
+                    })) {
+                        return Some(pair);
+                    }
                 }
             }
         }
-    }
-    OutputStream::try_default().ok()
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            OutputStream::try_default().ok()
+        }))
+        .ok()
+        .flatten()
+    }))
+    .ok()
+    .flatten()
 }
 
 /// Abstraction over the audio backend.
@@ -468,10 +483,8 @@ fn run_worker(
     load_seq: Arc<AtomicU64>,
     innertube: Arc<Innertube>,
 ) {
-    let mut stream_pair = open_output_stream(None);
-    let mut sink: Option<Sink> = stream_pair
-        .as_ref()
-        .and_then(|(_, handle)| Sink::try_new(handle).ok());
+    let mut stream_pair: Option<(OutputStream, rodio::OutputStreamHandle)> = None;
+    let mut sink: Option<Sink> = None;
 
     let (buf_tx, buf_rx) = mpsc::channel::<DecodedBuffer>();
 
@@ -480,10 +493,6 @@ fn run_worker(
     let mut desired_playing = false;
     let mut is_mock = true;
     let mut active_seq: u64 = 0;
-
-    if let Some(s) = &sink {
-        s.set_volume(volume);
-    }
 
     loop {
         // Check if a background stream download completed.
@@ -497,6 +506,10 @@ fn run_worker(
                 }
             }
             current_bytes = Some(ready.bytes.clone());
+
+            if stream_pair.is_none() {
+                stream_pair = open_output_stream(None);
+            }
 
             if let Some((_, handle)) = &stream_pair {
                 if let Ok(new_sink) = Sink::try_new(handle) {
@@ -577,6 +590,9 @@ fn run_worker(
                     }
                 }
                 EngineCmd::Seek(pos_ms) => {
+                    if stream_pair.is_none() {
+                        stream_pair = open_output_stream(None);
+                    }
                     let dur = clock.duration_ms.load(Ordering::Relaxed);
                     // Clamp seek target at least 500ms before end so decoder doesn't EOF on seek.
                     let clamped_ms = if dur > 600 {

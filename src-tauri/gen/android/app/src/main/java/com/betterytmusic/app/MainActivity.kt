@@ -5,7 +5,9 @@ import androidx.activity.enableEdgeToEdge
 
 class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
+    try {
+      enableEdgeToEdge()
+    } catch (_: Throwable) {}
     super.onCreate(savedInstanceState)
   }
 }

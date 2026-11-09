@@ -7,8 +7,12 @@
 //! `MediaControls` lives on its own thread and is fed through a channel, so the
 //! player never blocks on OS calls and we don't depend on it being `Send`.
 
-use std::sync::mpsc::{self, Sender};
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use std::sync::mpsc;
+use std::sync::mpsc::Sender;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use std::thread;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use std::time::Duration;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -16,8 +20,11 @@ use souvlaki::{
     MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig,
     SeekDirection,
 };
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use tauri::Manager;
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use crate::player::PlayerController;
 
 pub type MediaSender = Sender<MediaUpdate>;
