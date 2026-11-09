@@ -17,6 +17,24 @@
     return () => clearInterval(timer);
   });
 
+  let demoUiStyle = $state<'seamless' | 'boxed'>(theme.uiStyle);
+  let userInteractedWithStyle = $state(false);
+
+  // Auto-toggle demo UI style on Step 3 so the user visibly sees the morph animation
+  $effect(() => {
+    if (currentStep !== 2 || userInteractedWithStyle) return;
+    const timer = setInterval(() => {
+      demoUiStyle = demoUiStyle === 'seamless' ? 'boxed' : 'seamless';
+    }, 2500);
+    return () => clearInterval(timer);
+  });
+
+  function selectUiStyle(style: UiStyle) {
+    userInteractedWithStyle = true;
+    demoUiStyle = style;
+    theme.setUiStyle(style);
+  }
+
   const totalSteps = 4;
   const isLast = $derived(currentStep === totalSteps - 1);
 
@@ -172,45 +190,85 @@
         </div>
 
       {:else if currentStep === 2}
-        <!-- Step 3: Tactile 3D, Seamless Mode & Customization -->
+        <!-- Step 3: Tactile 3D, Seamless Mode & Customization with Live Morphing Animation -->
         <div class="step-pane step-fade">
           <div class="visual-wrap">
             <div class="theme-showcase">
-              <span class="theme-hint muted">Canlı Vurgu Rengini Seç:</span>
-              <div class="color-swatches">
-                {#each previewColors as c (c.value)}
-                  <button
-                    type="button"
-                    class="color-dot"
-                    class:active={theme.accent === c.value}
-                    style:background-color={c.value}
-                    title={c.name}
-                    aria-label={c.name}
-                    onclick={() => theme.setAccent(c.value)}
-                  >
-                    {#if theme.accent === c.value}
-                      <Icon name="check" size={14} />
-                    {/if}
-                  </button>
-                {/each}
+              <div class="theme-head">
+                <span class="theme-hint muted">Canlı Vurgu Rengi:</span>
+                <div class="color-swatches">
+                  {#each previewColors as c (c.value)}
+                    <button
+                      type="button"
+                      class="color-dot"
+                      class:active={theme.accent === c.value}
+                      style:background-color={c.value}
+                      title={c.name}
+                      aria-label={c.name}
+                      onclick={() => theme.setAccent(c.value)}
+                    >
+                      {#if theme.accent === c.value}
+                        <Icon name="check" size={13} />
+                      {/if}
+                    </button>
+                  {/each}
+                </div>
               </div>
 
+              <!-- Animated Live Mini UI Mockup Card showing the visual transformation -->
+              <div
+                class="ui-morph-card"
+                class:is-boxed={demoUiStyle === 'boxed'}
+                class:is-seamless={demoUiStyle === 'seamless'}
+              >
+                <div class="mock-card-inner">
+                  <div class="mock-cover-box" style:background-color={theme.accent}>
+                    <Icon name="now" size={20} />
+                  </div>
+                  <div class="mock-meta">
+                    <div class="mock-badge-row">
+                      <span class="mock-mode-pill" class:boxed-pill={demoUiStyle === 'boxed'}>
+                        {demoUiStyle === 'boxed' ? '3B DOKUNSAL (KUTULU)' : 'AKICI (KUTUSUZ)'}
+                      </span>
+                      {#if !userInteractedWithStyle}
+                        <span class="auto-anim-pill">Canlı Dönüşüm</span>
+                      {/if}
+                    </div>
+                    <span class="mock-song truncate">Süpermix & Çalma Listesi</span>
+                    <span class="mock-artist truncate muted">
+                      {demoUiStyle === 'boxed' ? 'Dokunsal 3B butonlar ve 2px kutulu çerçeveler' : 'Modern, çerçevesiz ve göz yormayan akıcı düzen'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    class="mock-play-btn"
+                    class:tactile-btn={demoUiStyle === 'boxed'}
+                    style:background-color={theme.accent}
+                    title="Önizleme Butonu"
+                    aria-label="Önizleme Butonu"
+                  >
+                    <Icon name="play" size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <!-- Interactive Style Toggle Switch -->
               <div class="style-toggle-row">
                 <button
                   type="button"
-                  class="btn sm"
-                  class:accent={theme.uiStyle === 'seamless'}
-                  onclick={() => theme.setUiStyle('seamless')}
+                  class="btn sm style-btn"
+                  class:accent={demoUiStyle === 'seamless'}
+                  onclick={() => selectUiStyle('seamless')}
                 >
                   Kutusuz (Sade)
                 </button>
                 <button
                   type="button"
-                  class="btn sm"
-                  class:accent={theme.uiStyle === 'boxed'}
-                  onclick={() => theme.setUiStyle('boxed')}
+                  class="btn sm style-btn"
+                  class:accent={demoUiStyle === 'boxed'}
+                  onclick={() => selectUiStyle('boxed')}
                 >
-                  Kutulu (Dokunsal)
+                  Kutulu (3B Dokunsal)
                 </button>
               </div>
             </div>
@@ -575,17 +633,24 @@
     box-shadow: inset 3px 0 0 var(--accent);
   }
 
-  /* Step 3: Theme Showcase */
+  /* Step 3: Theme Showcase & Live UI Morph Animation */
   .theme-showcase {
-    width: min(440px, 100%);
-    padding: 16px 20px;
+    width: min(460px, 100%);
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     background: var(--surface-2) !important;
     border: 2px solid var(--border) !important;
     border-radius: var(--radius);
+  }
+  .theme-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 4px;
   }
   .theme-hint {
     font-size: 12px;
@@ -593,11 +658,11 @@
   }
   .color-swatches {
     display: flex;
-    gap: 10px;
+    gap: 7px;
   }
   .color-dot {
-    width: 34px;
-    height: 34px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     border: 2px solid transparent;
     color: #fff;
@@ -612,11 +677,116 @@
   .color-dot.active {
     border-color: #fff;
     transform: scale(1.12);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
   }
+
+  /* Morphing Live Preview Card */
+  .ui-morph-card {
+    width: 100%;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    background: var(--surface);
+    transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .ui-morph-card.is-seamless {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+    transform: translateY(0);
+  }
+  .ui-morph-card.is-boxed {
+    border: 2px solid var(--border);
+    box-shadow: 0 4px 0 var(--edge);
+    transform: translateY(-2px);
+  }
+
+  .mock-card-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+  }
+  .mock-cover-box {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    color: var(--on-accent);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    transition: background-color 160ms ease;
+  }
+  .mock-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .mock-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+  .mock-mode-pill {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--surface-3);
+    color: var(--text-muted);
+    transition: all 200ms ease;
+  }
+  .mock-mode-pill.boxed-pill {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .auto-anim-pill {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--accent);
+    animation: pulse-soft 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  .mock-song {
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .mock-artist {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+  .mock-play-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    color: var(--on-accent);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .mock-play-btn.tactile-btn {
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+    transform: translateY(-1.5px);
+  }
+
   .style-toggle-row {
     display: flex;
     gap: 8px;
+    width: 100%;
+  }
+  .style-btn {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 700;
+    justify-content: center;
   }
 
   /* Step 4: Auth Card */
