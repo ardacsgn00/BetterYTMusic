@@ -152,9 +152,7 @@ impl Default for Innertube {
 
 impl Innertube {
     pub fn new() -> Self {
-        let tls = native_tls::TlsConnector::new().expect("failed to initialize native-tls");
         let agent = ureq::AgentBuilder::new()
-            .tls_connector(std::sync::Arc::new(tls))
             .timeout_connect(Duration::from_secs(8))
             .timeout_read(Duration::from_secs(20))
             .build();

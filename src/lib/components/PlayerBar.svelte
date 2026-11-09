@@ -8,6 +8,8 @@
   import Slider from './Slider.svelte';
   import { mini } from '#lib/mini.svelte.ts';
 
+  let { ontapnow }: { ontapnow?: () => void } = $props();
+
   const s = $derived(player.state);
   const liked = $derived(library.isFavorite(s.track?.id));
   const endTimeLabel = $derived.by(() => {
@@ -51,8 +53,15 @@
 
 <svelte:window onclick={() => (deviceMenuOpen = false)} />
 
-<footer class="bar">
-  <div class="info">
+<footer class="bar" class:has-track={Boolean(s.track)}>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div
+    class="info"
+    role="button"
+    tabindex="0"
+    onclick={() => ontapnow?.()}
+    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && ontapnow?.()}
+  >
     <Cover track={s.track} size="56px" radius="var(--radius-sm)" />
     <div class="text">
       <span class="title truncate">{s.track?.title ?? '—'}</span>
@@ -61,7 +70,10 @@
           type="button"
           class="artist-btn truncate muted"
           title="{s.track.artist} Sanatçı Sayfasını Aç"
-          onclick={() => player.openArtist(s.track!.artist)}
+          onclick={(e) => {
+            e.stopPropagation();
+            player.openArtist(s.track!.artist);
+          }}
         >
           {s.track.artist}
         </button>
@@ -74,7 +86,10 @@
         class="btn ghost icon radio-btn"
         title="Şarkı Radyosu Başlat"
         aria-label="Şarkı Radyosu Başlat"
-        onclick={() => player.startRadio(s.track!)}
+        onclick={(e) => {
+          e.stopPropagation();
+          player.startRadio(s.track!);
+        }}
       >
         <Icon name="radio" size={18} />
       </button>
@@ -83,7 +98,10 @@
         class:on={liked}
         title={liked ? 'Kitaplıktan çıkar' : 'Kitaplığa ekle'}
         aria-label={liked ? 'Kitaplıktan çıkar' : 'Kitaplığa ekle'}
-        onclick={() => library.toggle(s.track)}
+        onclick={(e) => {
+          e.stopPropagation();
+          library.toggle(s.track);
+        }}
       >
         <Icon name={liked ? 'heart-fill' : 'heart'} size={18} />
       </button>
@@ -418,40 +436,63 @@
     }
   }
 
-  /* Small windows: info + controls on one row, progress spans full width below. */
-  @media (max-width: 760px) {
+  /* Small windows & Mobile devices */
+  @media (max-width: 768px) {
     .bar {
+      position: fixed;
+      left: 8px;
+      right: 8px;
+      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      z-index: 95;
       grid-template-columns: 1fr auto;
       grid-template-areas:
         'info controls'
         'progress progress';
-      gap: 8px 12px;
-      padding: 10px 12px 12px;
+      gap: 4px 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 var(--edge-depth) 0 var(--edge);
+      background: var(--surface);
+      border: 2px solid var(--border);
+    }
+    .bar:not(.has-track) {
+      display: none !important;
     }
     .info {
       grid-area: info;
+      cursor: pointer;
+      gap: 10px;
+      min-width: 0;
     }
     .center {
       display: contents;
     }
     .controls {
       grid-area: controls;
-      gap: 8px;
+      gap: 6px;
     }
     .progress {
       grid-area: progress;
+      gap: 8px;
+    }
+    .progress .time {
+      font-size: 11px;
+      min-width: 34px;
     }
     .volume,
     .repeat,
-    .shuffle {
-      display: none;
+    .shuffle,
+    .radio-btn {
+      display: none !important;
     }
     .info :global(.cover) {
-      width: 44px !important;
+      width: 42px !important;
+      height: 42px !important;
     }
     .play {
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
     }
   }
 </style>

@@ -323,11 +323,13 @@ pub async fn auth_login(app: AppHandle) -> Result<(), String> {
         .parse()
         .map_err(|e: <tauri::Url as std::str::FromStr>::Err| e.to_string())?;
 
+    let builder = WebviewWindowBuilder::new(&app, "yt-login", WebviewUrl::External(login_url))
+        .title("YouTube Music — Google Hesabı ile Giriş Yap");
+    #[cfg(desktop)]
+    let builder = builder.inner_size(520.0, 680.0).center();
+
     let app_for_load = app.clone();
-    WebviewWindowBuilder::new(&app, "yt-login", WebviewUrl::External(login_url))
-        .title("YouTube Music — Google Hesabı ile Giriş Yap")
-        .inner_size(520.0, 680.0)
-        .center()
+    builder
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
         .on_page_load(move |_win, payload| {
             if payload.event() != PageLoadEvent::Finished {

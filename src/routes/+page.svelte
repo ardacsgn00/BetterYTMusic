@@ -220,7 +220,59 @@
     {/if}
   </main>
 
-  <PlayerBar />
+  <PlayerBar ontapnow={() => selectView('now')} />
+
+  <nav class="mobile-nav" aria-label="Mobil Menü">
+    <button
+      type="button"
+      class="m-nav-item"
+      class:active={view === 'home' && !player.openedArtist}
+      onclick={() => selectView('home')}
+    >
+      <Icon name="home" size={20} />
+      <span class="m-nav-label">Ana Sayfa</span>
+    </button>
+
+    <button
+      type="button"
+      class="m-nav-item"
+      class:active={view === 'now' && !player.openedArtist}
+      onclick={() => selectView('now')}
+    >
+      <Icon name="now" size={20} />
+      <span class="m-nav-label">Dinle</span>
+    </button>
+
+    <button
+      type="button"
+      class="m-nav-item"
+      class:active={view === 'library' && !player.openedArtist}
+      onclick={() => selectView('library')}
+    >
+      <Icon name="library" size={20} />
+      <span class="m-nav-label">Kitaplık</span>
+    </button>
+
+    <button
+      type="button"
+      class="m-nav-item"
+      class:active={view === 'search' && !player.openedArtist}
+      onclick={() => selectView('search')}
+    >
+      <Icon name="search" size={20} />
+      <span class="m-nav-label">Ara</span>
+    </button>
+
+    <button
+      type="button"
+      class="m-nav-item"
+      class:active={view === 'theme' && !player.openedArtist}
+      onclick={() => selectView('theme')}
+    >
+      <Icon name="settings" size={20} />
+      <span class="m-nav-label">Ayarlar</span>
+    </button>
+  </nav>
 
   {#if player.onboardingOpen}
     <OnboardingModal />
@@ -333,20 +385,82 @@
     }
   }
 
-  @media (max-width: 760px) {
+  .mobile-nav {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
     .shell {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto minmax(0, 1fr) auto;
-      grid-template-areas:
-        'side'
-        'main'
-        'bar';
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      position: relative;
+    }
+    .shell > :global(.sidebar) {
+      display: none !important;
     }
     main {
-      padding: 12px;
+      flex: 1;
+      min-height: 0;
+      padding: 12px 12px calc(140px + env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      display: block;
     }
     .now-grid {
-      gap: 12px;
+      grid-template-columns: 1fr !important;
+      grid-template-rows: auto auto;
+      gap: 14px;
+      height: auto;
+      min-height: auto;
+    }
+    .splitter {
+      display: none !important;
+    }
+    .mobile-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(56px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      background: var(--surface);
+      border-top: 2px solid var(--border);
+      z-index: 100;
+      box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.4);
+    }
+    .m-nav-item {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      padding: 4px 0;
+      transition: color 120ms ease, transform 70ms ease;
+      touch-action: manipulation;
+    }
+    .m-nav-item:active {
+      transform: scale(0.92);
+    }
+    .m-nav-item.active {
+      color: var(--accent);
+    }
+    .m-nav-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
     }
   }
 </style>

@@ -157,22 +157,27 @@
     gap: 6px;
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 768px) {
     .now {
-      flex-direction: row;
-      padding: 14px;
-      gap: 14px;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+      text-align: center;
     }
     .cover-wrap {
-      width: 96px;
+      width: min(72vw, 260px);
+      margin: 0 auto;
       box-shadow: 0 var(--edge-depth) 0 var(--edge);
     }
     .meta {
-      text-align: left;
-      min-width: 0;
+      text-align: center;
+      width: 100%;
     }
     .badges {
-      justify-content: flex-start;
+      justify-content: center;
+    }
+    .now-actions {
+      justify-content: center;
     }
   }
 </style>

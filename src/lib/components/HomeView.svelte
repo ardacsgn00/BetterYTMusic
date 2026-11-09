@@ -1169,7 +1169,32 @@
     gap: 4px;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 768px) {
+    .view {
+      gap: 16px;
+    }
+    .head {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+    .head-actions {
+      justify-content: flex-start;
+      width: 100%;
+    }
+    .mix-grid {
+      grid-template-columns: 1fr;
+    }
+    .quick-grid {
+      grid-template-columns: 1fr;
+    }
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .item {
+      padding: 8px;
+    }
     .pl-hero-art {
       justify-self: center;
     }

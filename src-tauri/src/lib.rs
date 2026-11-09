@@ -68,20 +68,23 @@ pub fn run() {
             app.state::<PlayerController>().broadcast(&handle);
             Ok(())
         })
-        .on_window_event(|window, event| {
-            // Closing the window either hides to the tray or exits, based on settings.
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "main" {
-                    let close_to_tray = window
-                        .app_handle()
-                        .try_state::<Arc<SettingsManager>>()
-                        .map(|s| s.get().close_to_tray)
-                        .unwrap_or(true);
-                    if close_to_tray {
-                        api.prevent_close();
-                        let _ = window.hide();
-                    } else {
-                        window.app_handle().exit(0);
+        .on_window_event(|_window, _event| {
+            #[cfg(desktop)]
+            {
+                // Closing the window either hides to the tray or exits, based on settings.
+                if let WindowEvent::CloseRequested { api, .. } = _event {
+                    if _window.label() == "main" {
+                        let close_to_tray = _window
+                            .app_handle()
+                            .try_state::<Arc<SettingsManager>>()
+                            .map(|s| s.get().close_to_tray)
+                            .unwrap_or(true);
+                        if close_to_tray {
+                            api.prevent_close();
+                            let _ = _window.hide();
+                        } else {
+                            _window.app_handle().exit(0);
+                        }
                     }
                 }
             }

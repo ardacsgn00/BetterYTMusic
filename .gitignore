@@ -7,5 +7,6 @@ src-tauri/gen/schemas/
 
 # OS & logs
 *.log
+*.apk
 .DS_Store
 Thumbs.db

@@ -11,6 +11,7 @@ use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::Duration;
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use souvlaki::{
     MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig,
     SeekDirection,
@@ -37,6 +38,12 @@ pub enum MediaUpdate {
 
 const SEEK_STEP_MS: u64 = 10_000;
 
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub fn spawn(_app: &AppHandle) -> Option<MediaSender> {
+    None
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn spawn(app: &AppHandle) -> Option<MediaSender> {
     // SMTC needs the HWND of our window; raw pointers aren't Send, so pass as usize.
     #[cfg(target_os = "windows")]
@@ -104,6 +111,7 @@ pub fn spawn(app: &AppHandle) -> Option<MediaSender> {
     Some(tx)
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn handle_event(app: &AppHandle, event: MediaControlEvent) {
     let ctrl = app.state::<PlayerController>();
     match event {
@@ -123,6 +131,7 @@ fn handle_event(app: &AppHandle, event: MediaControlEvent) {
     }
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn seek_by(app: &AppHandle, dir: SeekDirection, step_ms: u64) {
     let ctrl = app.state::<PlayerController>();
     let pos = ctrl.snapshot().position_ms;
