@@ -126,15 +126,6 @@
       >
         <Icon name="shuffle" size={20} />
       </button>
-      <button
-        class="btn ghost icon autoplay-btn"
-        class:on={player.settings.autoplay}
-        title={player.settings.autoplay ? 'Otomatik Çalma: Açık (Kuyruk bitince benzer şarkılar kesintisiz çalar)' : 'Otomatik Çalma: Kapalı'}
-        aria-label="Otomatik Çalma"
-        onclick={() => player.updateSettings({ autoplay: !player.settings.autoplay })}
-      >
-        <Icon name="autoplay" size={19} />
-      </button>
     </div>
 
     <div class="progress">
@@ -158,6 +149,17 @@
   </div>
 
   <div class="volume">
+    <button
+      type="button"
+      class="btn ghost icon autoplay-btn"
+      class:on={player.settings.autoplay}
+      title={player.settings.autoplay ? 'Otomatik Çalma: Açık (Kuyruk bitince benzer şarkılar kesintisiz çalar)' : 'Otomatik Çalma: Kapalı'}
+      aria-label="Otomatik Çalma"
+      onclick={() => player.updateSettings({ autoplay: !player.settings.autoplay })}
+    >
+      <Icon name="autoplay" size={19} />
+    </button>
+
     <button
       type="button"
       class="btn ghost icon"

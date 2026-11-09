@@ -23,9 +23,8 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
 
-  const featured = $derived(tracks[0] ?? null);
-  const quickPicks = $derived(tracks.slice(1, 9));
-  const shelfTracks = $derived(tracks.length > 9 ? tracks.slice(9) : tracks.slice(1));
+  const quickPicks = $derived(tracks.slice(0, 8));
+  const shelfTracks = $derived(tracks.length > 8 ? tracks.slice(8) : tracks);
 
   async function loadHome() {
     loading = true;
@@ -322,7 +321,15 @@
           <Icon name="sparkles" size={14} />
           <span>Ruh Hali & Türler</span>
         </div>
-        <div class="mood-scroll">
+        <div
+          class="mood-scroll"
+          onwheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.preventDefault();
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+        >
           {#each moodCategories as cat (cat.params)}
             {@const isActive = selectedMood?.params === cat.params}
             <button
@@ -414,57 +421,6 @@
         <p class="muted">YouTube Music akışı hazırlanıyor...</p>
       </div>
     {:else if tracks.length > 0}
-      {#if featured}
-        {@const featActive = player.state.track?.id === featured.id}
-        {@const featLiked = library.isFavorite(featured.id)}
-        <div class="card hero" class:active={featActive}>
-          <div class="hero-cover">
-            <Cover track={featured} size="136px" radius="var(--radius)" />
-          </div>
-          <div class="hero-body">
-            <span class="badge">ÖNE ÇIKAN SEÇİM</span>
-            <h2 class="hero-title truncate">{featured.title}</h2>
-            <p class="hero-meta muted truncate">
-              <button
-                type="button"
-                class="artist-inline-btn"
-                title="{featured.artist} Sanatçı Sayfasını Aç"
-                onclick={() => player.openArtist(featured.artist)}
-              >
-                {featured.artist}
-              </button>
-              {featured.album ? ` · ${featured.album}` : ''}
-              {featured.durationMs ? ` · ${formatTime(featured.durationMs)}` : ''}
-            </p>
-            <div class="hero-btns">
-              <button
-                class="btn accent"
-                onclick={() => player.playTrack(featured, tracks, 'Ana Sayfa')}
-              >
-                <Icon name="play" size={18} />
-                Hemen Dinle
-              </button>
-              <button
-                class="btn"
-                title="Şarkı Radyosu Başlat"
-                onclick={() => player.startRadio(featured)}
-              >
-                <Icon name="radio" size={17} />
-                Radyo Başlat
-              </button>
-              <button
-                class="btn"
-                class:accent={featLiked}
-                onclick={() => library.toggle(featured)}
-              >
-                <Icon name={featLiked ? 'heart-fill' : 'heart'} size={17} />
-                {featLiked ? 'Favorilerde' : 'Favorilere Ekle'}
-              </button>
-            </div>
-          </div>
-        </div>
-      {/if}
-
       {#if playlists.length > 0}
         <div class="section">
           <div class="sec-head">
@@ -720,24 +676,7 @@
     padding: 24px;
   }
 
-  /* Hero Featured Card */
-  .hero {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 22px;
-    padding: 20px;
-  }
-  .hero.active {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-  }
-  .hero-body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0;
-  }
+  /* Mood Section Badge */
   .badge {
     align-self: flex-start;
     padding: 3px 10px;
@@ -747,19 +686,6 @@
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.05em;
-  }
-  .hero-title {
-    font-size: 24px;
-    font-weight: 800;
-  }
-  .hero-meta {
-    font-size: 14px;
-  }
-  .hero-btns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 6px;
   }
 
   /* Playlist Detail View */
@@ -1193,7 +1119,11 @@
     gap: 8px;
     overflow-x: auto;
     padding-bottom: 2px;
-    scrollbar-width: thin;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .mood-scroll::-webkit-scrollbar {
+    display: none;
   }
   .mood-chip {
     flex-shrink: 0;
@@ -1240,19 +1170,11 @@
   }
 
   @media (max-width: 640px) {
-    .hero {
-      grid-template-columns: 1fr;
-      text-align: center;
-    }
-    .hero-cover,
     .pl-hero-art {
       justify-self: center;
     }
     .badge {
       align-self: center;
-    }
-    .hero-btns {
-      justify-content: center;
     }
   }
 </style>
