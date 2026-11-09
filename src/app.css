@@ -224,3 +224,169 @@ p {
 .btn.ghost.on {
   color: var(--accent);
 }
+
+/* ==========================================================================
+   Universal inline text button (e.g. clickable artist, track info)
+   Always renders as natural plain text, NO box, NO border, NO background.
+   ========================================================================== */
+.artist-btn,
+.artist-inline-btn,
+.text-link-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font: inherit !important;
+  color: inherit !important;
+  text-align: inherit;
+  cursor: pointer;
+  display: inline;
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+
+.artist-btn:hover,
+.artist-inline-btn:hover,
+.text-link-btn:hover {
+  color: var(--accent) !important;
+  text-decoration: underline !important;
+}
+
+/* ==========================================================================
+   Seamless / Borderless UI Mode (Kutusuz & Akıcı Tasarım)
+   Removes thick 2px outline boxes and 4px heavy tactile shadows across panels,
+   lists, grids, and cards. Content breathes seamlessly like modern music apps.
+   ========================================================================== */
+:root[data-ui-style='seamless'] {
+  --edge-depth: 0px;
+}
+
+:root[data-ui-style='seamless'] .card {
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+/* Settings block, Hero, and Popovers remain separated with a subtle clean surface */
+:root[data-ui-style='seamless'] .card.block,
+:root[data-ui-style='seamless'] .artist-bio-card,
+:root[data-ui-style='seamless'] .card.hero,
+:root[data-ui-style='seamless'] .artist-banner,
+:root[data-ui-style='seamless'] .card.empty,
+:root[data-ui-style='seamless'] .card.msg,
+:root[data-ui-style='seamless'] .zoom-popover {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .btn {
+  border-width: 1px;
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .btn:active,
+:root[data-ui-style='seamless'] .btn[aria-pressed='true'] {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .btn.accent {
+  box-shadow: none;
+  border-color: transparent;
+}
+
+:root[data-ui-style='seamless'] .sidebar {
+  border-right: 1px solid var(--border);
+}
+
+:root[data-ui-style='seamless'] .bar {
+  border-top: 1px solid var(--border);
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .now-grid .now,
+:root[data-ui-style='seamless'] .now-grid .queue,
+:root[data-ui-style='seamless'] .now-grid .lyrics-wrap {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .queue .q-head,
+:root[data-ui-style='seamless'] .lyrics-wrap .lyr-head {
+  border-bottom: 1px solid var(--border);
+}
+
+:root[data-ui-style='seamless'] .quick-item,
+:root[data-ui-style='seamless'] .mix-card,
+:root[data-ui-style='seamless'] .item,
+:root[data-ui-style='seamless'] .pl-card,
+:root[data-ui-style='seamless'] .sim-card {
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .quick-item:hover,
+:root[data-ui-style='seamless'] .mix-card:hover,
+:root[data-ui-style='seamless'] .item:hover,
+:root[data-ui-style='seamless'] .pl-card:hover,
+:root[data-ui-style='seamless'] .sim-card:hover,
+:root[data-ui-style='seamless'] .pl-row:hover,
+:root[data-ui-style='seamless'] .q-item:hover,
+:root[data-ui-style='seamless'] .track-row:hover,
+:root[data-ui-style='seamless'] .pl-track-row:hover,
+:root[data-ui-style='seamless'] .results .row:hover {
+  background: var(--surface);
+}
+
+:root[data-ui-style='seamless'] .quick-item.active,
+:root[data-ui-style='seamless'] .mix-card.active,
+:root[data-ui-style='seamless'] .item.active,
+:root[data-ui-style='seamless'] .pl-row.active,
+:root[data-ui-style='seamless'] .q-item.active,
+:root[data-ui-style='seamless'] .track-row.active,
+:root[data-ui-style='seamless'] .pl-track-row.active,
+:root[data-ui-style='seamless'] .results .row.active {
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+
+:root[data-ui-style='seamless'] .mood-bar {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 4px 0 6px 0;
+}
+
+:root[data-ui-style='seamless'] .mood-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .mood-chip.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .mood-section {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+:root[data-ui-style='seamless'] .search-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .cover-wrap {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}

@@ -18,6 +18,7 @@ export type EdgeDepth = 'none' | 'subtle' | 'normal' | 'bold';
 export type Density = 'compact' | 'comfortable';
 export type PlayButtonShape = 'circle' | 'squircle';
 export type CardSize = 'compact' | 'normal' | 'large';
+export type UiStyle = 'boxed' | 'seamless';
 export type StartupView = 'last' | 'home' | 'now' | 'library' | 'search';
 export type MiniLayout = 'strip' | 'square';
 
@@ -141,6 +142,7 @@ class ThemeStore {
   radius = $state<RadiusScale>('normal');
   edgeDepth = $state<EdgeDepth>('normal');
   density = $state<Density>('comfortable');
+  uiStyle = $state<UiStyle>('seamless');
   appName = $state<string>('BetterYTMusic');
   /** Page zoom percentage (75% – 135%, like Chrome zoom). */
   zoom = $state<number>(100);
@@ -237,6 +239,9 @@ class ThemeStore {
       if (saved.cardSize === 'compact' || saved.cardSize === 'normal' || saved.cardSize === 'large') {
         this.cardSize = saved.cardSize;
       }
+      if (saved.uiStyle === 'boxed' || saved.uiStyle === 'seamless') {
+        this.uiStyle = saved.uiStyle;
+      }
       if (typeof saved.hideSubtitles === 'boolean') {
         this.hideSubtitles = saved.hideSubtitles;
       }
@@ -299,6 +304,11 @@ class ThemeStore {
 
   setDensity(density: Density) {
     this.density = density;
+    this.#apply();
+  }
+
+  setUiStyle(style: UiStyle) {
+    this.uiStyle = style;
     this.#apply();
   }
 
@@ -426,6 +436,7 @@ class ThemeStore {
     this.radius = 'normal';
     this.edgeDepth = 'normal';
     this.density = 'comfortable';
+    this.uiStyle = 'seamless';
     this.appName = 'BetterYTMusic';
     this.zoom = 100;
     this.split2Left = 52;
@@ -446,6 +457,7 @@ class ThemeStore {
     const root = document.documentElement;
     root.dataset.theme = this.resolved;
     root.dataset.density = this.density;
+    root.dataset.uiStyle = this.uiStyle;
     root.dataset.edge = this.edgeDepth;
     root.dataset.cardSize = this.cardSize;
     root.dataset.subtitles = this.hideSubtitles ? 'hidden' : 'visible';
@@ -475,6 +487,7 @@ class ThemeStore {
         radius: this.radius,
         edgeDepth: this.edgeDepth,
         density: this.density,
+        uiStyle: this.uiStyle,
         appName: this.appName,
         zoom: this.zoom,
         split2Left: this.split2Left,

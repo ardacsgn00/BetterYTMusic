@@ -7,7 +7,7 @@
 **Hafif, hızlı ve kişiselleştirilebilir masaüstü YouTube Music istemcisi**  
 *Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API*
 
-[![Version](https://img.shields.io/badge/version-v0.18.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Version](https://img.shields.io/badge/version-v0.19.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Built with Tauri](https://img.shields.io/badge/Tauri_2-Rust_%2B_Svelte_5-06d6a0?style=for-the-badge)](https://tauri.app)
 [![Developer](https://img.shields.io/badge/Geli%C5%9Ftirici-Arda_Co%C5%9Fgun-8338ec?style=for-the-badge)](https://github.com/ardacsgn00)

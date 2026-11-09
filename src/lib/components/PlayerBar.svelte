@@ -133,7 +133,7 @@
         aria-label="Otomatik Çalma"
         onclick={() => player.updateSettings({ autoplay: !player.settings.autoplay })}
       >
-        <Icon name="infinity" size={19} />
+        <Icon name="autoplay" size={19} />
       </button>
     </div>
 
@@ -261,8 +261,24 @@
     font-weight: 700;
     font-size: 15px;
   }
-  .artist {
+  .artist,
+  .artist-btn {
     font-size: 13px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: left;
+    display: inline;
+    text-decoration: none;
+    transition: color 120ms ease;
+  }
+  .artist-btn:hover {
+    color: var(--text);
+    text-decoration: underline;
   }
   .center {
     display: flex;

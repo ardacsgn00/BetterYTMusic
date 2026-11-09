@@ -66,13 +66,35 @@
           {@const active = player.state.track?.id === track.id}
           {@const liked = library.isFavorite(track.id)}
           <li class="row" class:active>
-            <button class="main-hit" onclick={() => player.playTrack(track, combined, 'Kitaplık')}>
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="main-hit" onclick={() => player.playTrack(track, combined, 'Kitaplık')}>
               <Cover {track} size="48px" radius="var(--radius-sm)" />
               <span class="info">
                 <span class="t truncate">{track.title}</span>
-                <span class="a truncate muted">{track.artist}</span>
+                <span class="a truncate muted">
+                  <button
+                    type="button"
+                    class="artist-inline-btn"
+                    title="{track.artist} Sanatçı Sayfasını Aç"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      player.openArtist(track.artist);
+                    }}
+                  >
+                    {track.artist}
+                  </button>
+                </span>
               </span>
               <span class="dur muted">{track.durationMs ? formatTime(track.durationMs) : ''}</span>
+            </div>
+            <button
+              class="btn ghost icon"
+              title="Şarkı Radyosu Başlat"
+              aria-label="Şarkı Radyosu Başlat"
+              onclick={() => player.startRadio(track)}
+            >
+              <Icon name="radio" size={17} />
             </button>
             <button
               class="btn ghost icon"

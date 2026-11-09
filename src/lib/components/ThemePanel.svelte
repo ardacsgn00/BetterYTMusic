@@ -9,6 +9,7 @@
     type EdgeDepth,
     type Density,
     type CardSize,
+    type UiStyle,
     type StartupView
   } from '#lib/theme.svelte.ts';
   import { player } from '#lib/player.svelte.ts';
@@ -72,6 +73,19 @@
   const densities: { id: Density; label: string }[] = [
     { id: 'comfortable', label: 'Rahat (Geniş)' },
     { id: 'compact', label: 'Sıkı (Kompakt)' }
+  ];
+
+  const uiStyles: { id: UiStyle; label: string; desc: string }[] = [
+    {
+      id: 'seamless',
+      label: 'Kutusuz & Akıcı (Sade)',
+      desc: 'Kenarlıksız, modern ve göz yormayan akıcı düzen (Önerilen)'
+    },
+    {
+      id: 'boxed',
+      label: 'Kutulu (Dokunsal)',
+      desc: '2px kenarlıklar ve 3B alt gölgeli klasik kutu görünümü'
+    }
   ];
 
   const cardSizes: { id: CardSize; label: string }[] = [
@@ -259,8 +273,24 @@
     </div>
 
     <div class="card block">
-      <h2>Kart Köşeleri & 3B Derinlik</h2>
-      <p class="muted">Düğme ve kartların köşe yuvarlaklığını ve alt kenar kalınlığını seç.</p>
+      <h2>Arayüz Düzeni & 3B Derinlik</h2>
+      <p class="muted">Kutusuz (akıcı) veya kutulu arayüz stilini, köşe yuvarlaklığını ve alt kenar kalınlığını seç.</p>
+      <div class="sub-group">
+        <span class="sub-label muted">Arayüz Çerçeve / Kutu Stili</span>
+        <p class="sub-desc muted">Panelleri, listeleri ve müzik kartlarını çevreleyen 2px kutuların açık veya kapalı olması.</p>
+        <div class="opt-row">
+          {#each uiStyles as us (us.id)}
+            <button
+              class="btn"
+              class:accent={theme.uiStyle === us.id}
+              title={us.desc}
+              onclick={() => theme.setUiStyle(us.id)}
+            >
+              {us.label}
+            </button>
+          {/each}
+        </div>
+      </div>
       <div class="sub-group">
         <span class="sub-label muted">Köşe Stili</span>
         <div class="opt-row">
