@@ -63,7 +63,7 @@
     if (e.target === e.currentTarget) player.closeOnboarding();
   }}
 >
-  <div class="guide-card card">
+  <div class="guide-card">
     <!-- Header -->
     <header class="guide-header">
       <div class="brand">
@@ -175,7 +175,7 @@
         <!-- Step 3: Tactile 3D, Seamless Mode & Customization -->
         <div class="step-pane step-fade">
           <div class="visual-wrap">
-            <div class="theme-showcase card">
+            <div class="theme-showcase">
               <span class="theme-hint muted">Canlı Vurgu Rengini Seç:</span>
               <div class="color-swatches">
                 {#each previewColors as c (c.value)}
@@ -234,7 +234,7 @@
         <!-- Step 4: Library & Google Sync -->
         <div class="step-pane step-fade">
           <div class="visual-wrap">
-            <div class="auth-card card">
+            <div class="auth-card">
               <div class="auth-icon-wrap" style:background-color={theme.accent}>
                 <Icon name="user" size={32} />
               </div>
@@ -313,9 +313,9 @@
     position: fixed;
     inset: 0;
     z-index: 1000;
-    background: rgba(0, 0, 0, 0.72);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -326,10 +326,10 @@
   .guide-card {
     width: min(640px, 94vw);
     max-height: min(720px, 90vh);
-    background: var(--surface);
-    border: 2px solid var(--border);
+    background: var(--surface) !important;
+    border: 2px solid var(--border) !important;
     border-radius: var(--radius);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 var(--edge-depth) 0 var(--edge);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.85), 0 var(--edge-depth) 0 var(--edge);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -343,7 +343,7 @@
     justify-content: space-between;
     padding: 16px 20px;
     border-bottom: 1px solid var(--border);
-    background: var(--surface-2);
+    background: var(--surface-2) !important;
   }
   .brand {
     display: flex;
@@ -386,6 +386,7 @@
 
   /* Body & Step Animations */
   .guide-body {
+    background: var(--surface) !important;
     padding: 28px 24px 20px;
     min-height: 380px;
     display: flex;
@@ -504,8 +505,8 @@
   /* Step 2: Karaoke Lyrics Card */
   .karaoke-card {
     width: min(440px, 100%);
-    background: var(--surface-2);
-    border: 2px solid var(--border);
+    background: var(--surface-2) !important;
+    border: 2px solid var(--border) !important;
     border-radius: var(--radius);
     padding: 14px 18px;
     text-align: left;
@@ -582,7 +583,9 @@
     flex-direction: column;
     align-items: center;
     gap: 14px;
-    background: var(--surface-2);
+    background: var(--surface-2) !important;
+    border: 2px solid var(--border) !important;
+    border-radius: var(--radius);
   }
   .theme-hint {
     font-size: 12px;
@@ -623,7 +626,9 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    background: var(--surface-2);
+    background: var(--surface-2) !important;
+    border: 2px solid var(--border) !important;
+    border-radius: var(--radius);
     text-align: left;
   }
   .auth-icon-wrap {
@@ -672,7 +677,7 @@
     justify-content: space-between;
     padding: 14px 20px;
     border-top: 1px solid var(--border);
-    background: var(--surface-2);
+    background: var(--surface-2) !important;
   }
   .footer-left,
   .footer-right {

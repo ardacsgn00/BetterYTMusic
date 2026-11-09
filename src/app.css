@@ -268,8 +268,12 @@ p {
   box-shadow: none;
 }
 
-/* Settings block, Hero, and Popovers remain separated with a subtle clean surface */
+/* Settings block, Hero, Guide Modal, and Popovers remain separated with a subtle clean surface */
 :root[data-ui-style='seamless'] .card.block,
+:root[data-ui-style='seamless'] .guide-card,
+:root[data-ui-style='seamless'] .karaoke-card,
+:root[data-ui-style='seamless'] .theme-showcase,
+:root[data-ui-style='seamless'] .auth-card,
 :root[data-ui-style='seamless'] .artist-bio-card,
 :root[data-ui-style='seamless'] .card.hero,
 :root[data-ui-style='seamless'] .artist-banner,
