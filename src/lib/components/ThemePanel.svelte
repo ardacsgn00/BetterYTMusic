@@ -899,6 +899,7 @@
   }
   .settings-controls-col {
     min-width: 0;
+    container-type: inline-size;
   }
   .simulation-col {
     position: sticky;
@@ -908,11 +909,11 @@
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 390px), 1fr));
     gap: 20px;
   }
   .span-2 {
-    grid-column: span 2;
+    grid-column: 1 / -1;
   }
   .block {
     display: flex;
@@ -1751,7 +1752,16 @@
     font-weight: 700;
   }
 
-  @media (max-width: 1200px) {
+  @container (max-width: 820px) {
+    .grid {
+      grid-template-columns: 1fr !important;
+    }
+    .span-2 {
+      grid-column: 1 / -1 !important;
+    }
+  }
+
+  @media (max-width: 1320px) {
     .settings-layout {
       grid-template-columns: 1fr;
     }
@@ -1762,10 +1772,10 @@
 
   @media (max-width: 860px) {
     .grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr !important;
     }
     .span-2 {
-      grid-column: span 1;
+      grid-column: 1 / -1 !important;
     }
     .insp-badges {
       grid-template-columns: 1fr;
