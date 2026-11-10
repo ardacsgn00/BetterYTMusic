@@ -595,47 +595,167 @@
             {player.settings.startMinimized ? 'Açık' : 'Kapalı'}
           </button>
         </div>
+      </div>
+    </div>
 
-        <div class="toggle-row">
-          <div class="toggle-text">
-            <span class="t-title">Discord Zengin Varlık (Rich Presence)</span>
-            <span class="t-desc muted">Discord profilinde çalan şarkıyı, sanatçıyı, albüm kapağını ve canlı süre çubuğunu göster.</span>
+    <!-- Discord Rich Presence Customization & Live Simulation -->
+    <div class="card block discord-block">
+      <div class="discord-block-head">
+        <div>
+          <h2>Discord Zengin Varlık (Rich Presence)</h2>
+          <p class="muted">Discord profilinde müzik durumunu göster ve canlı önizlemeyle özelleştir.</p>
+        </div>
+        <button
+          class="btn toggle-btn"
+          class:accent={player.settings.discordRpc}
+          onclick={() => player.updateSettings({ discordRpc: !player.settings.discordRpc })}
+        >
+          {player.settings.discordRpc ? 'Açık' : 'Kapalı'}
+        </button>
+      </div>
+
+      {#if player.settings.discordRpc}
+        <!-- Discord Profile Card Simulation -->
+        <div class="discord-sim-card">
+          <div class="d-sim-user-bar">
+            <div class="d-sim-avatar">
+              {#if player.state.track?.thumbnail && player.settings.discordShowCover}
+                <img src={player.state.track.thumbnail} alt="" class="d-sim-avatar-img" />
+              {:else}
+                <div class="d-sim-avatar-fallback">
+                  <Icon name="now" size={16} />
+                </div>
+              {/if}
+              <span class="d-sim-status-dot"></span>
+            </div>
+            <div class="d-sim-user-meta">
+              <div class="d-sim-username">
+                {player.auth.accountName || 'BetterYTMusic'}
+                <span class="d-sim-tag">#0001</span>
+              </div>
+              <span class="d-sim-activity-label">BİR ŞEY DİNLİYOR</span>
+            </div>
           </div>
-          <button
-            class="btn toggle-btn"
-            class:accent={player.settings.discordRpc}
-            onclick={() => player.updateSettings({ discordRpc: !player.settings.discordRpc })}
-          >
-            {player.settings.discordRpc ? 'Açık' : 'Kapalı'}
-          </button>
+
+          <div class="d-sim-activity-box">
+            <div class="d-sim-act-main">
+              {#if player.settings.discordShowCover}
+                <div class="d-sim-cover-wrap">
+                  {#if player.state.track?.thumbnail}
+                    <img src={player.state.track.thumbnail} alt="" class="d-sim-cover" />
+                  {:else}
+                    <div class="d-sim-cover-fallback">
+                      <Icon name="now" size={26} />
+                    </div>
+                  {/if}
+                  <div class="d-sim-badge-dot">
+                    <Icon name={player.state.isPlaying ? 'play' : 'pause'} size={11} />
+                  </div>
+                </div>
+              {/if}
+
+              <div class="d-sim-meta">
+                <span class="d-sim-app-title">BetterYTMusic</span>
+                <span class="d-sim-song truncate">
+                  {player.state.track?.title || 'IMMIGRANT'}
+                </span>
+                <span class="d-sim-artist truncate muted">
+                  {#if !player.state.isPlaying && !player.settings.discordClearOnPause}
+                    Duraklatıldı • {player.state.track?.artist || 'ALIZADE'}
+                  {:else}
+                    {player.state.track?.artist || 'ALIZADE'}
+                  {/if}
+                </span>
+
+                {#if player.settings.discordShowTime}
+                  {@const curSec = Math.floor(player.position / 1000)}
+                  {@const durSec = Math.max(1, Math.floor((player.state.track?.durationMs || 180000) / 1000))}
+                  {@const pct = Math.min(100, Math.max(0, (curSec / durSec) * 100))}
+                  <div class="d-sim-progress-wrap">
+                    <div class="d-sim-bar-bg">
+                      <div class="d-sim-bar-fill" style:width="{pct}%"></div>
+                    </div>
+                    <div class="d-sim-time-text">
+                      <span>{Math.floor(curSec / 60)}:{String(curSec % 60).padStart(2, '0')}</span>
+                      <span>{Math.floor(durSec / 60)}:{String(durSec % 60).padStart(2, '0')}</span>
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            </div>
+
+            {#if player.settings.discordShowButton}
+              <div class="d-sim-action-btn">
+                <Icon name="link" size={13} />
+                YouTube Music'te Aç
+              </div>
+            {/if}
+          </div>
         </div>
 
-        {#if player.settings.discordRpc}
-          <div class="toggle-row discord-cfg-row">
+        <!-- Customization toggles -->
+        <div class="d-custom-list">
+          <div class="toggle-row">
             <div class="toggle-text">
-              <span class="t-title">Discord Uygulama Kimliği (Client ID)</span>
-              <span class="t-desc muted">Discord Developer Portal'daki BetterYTMusic uygulama kimliği.</span>
+              <span class="t-title">Albüm Kapağı</span>
+              <span class="t-desc muted">Profil kartında yüksek çözünürlüklü şarkı kapağını göster.</span>
             </div>
-            <div class="discord-input-wrap">
-              <input
-                type="text"
-                class="discord-input"
-                bind:value={player.settings.discordClientId}
-                placeholder="1569629580694655006"
-                onchange={(e) => player.updateSettings({ discordClientId: e.currentTarget.value.trim() })}
-              />
-              <button
-                type="button"
-                class="btn sm"
-                title="Varsayılan ID'ye Dönüştür"
-                onclick={() => player.updateSettings({ discordClientId: '1569629580694655006' })}
-              >
-                Sıfırla
-              </button>
-            </div>
+            <button
+              class="btn toggle-btn"
+              class:accent={player.settings.discordShowCover}
+              onclick={() => player.updateSettings({ discordShowCover: !player.settings.discordShowCover })}
+            >
+              {player.settings.discordShowCover ? 'Açık' : 'Kapalı'}
+            </button>
           </div>
-        {/if}
-      </div>
+
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="t-title">Canlı İlerleme Çubuğu</span>
+              <span class="t-desc muted">Şarkının anlık süresini Discord'da canlı kayan çubukla göster.</span>
+            </div>
+            <button
+              class="btn toggle-btn"
+              class:accent={player.settings.discordShowTime}
+              onclick={() => player.updateSettings({ discordShowTime: !player.settings.discordShowTime })}
+            >
+              {player.settings.discordShowTime ? 'Açık' : 'Kapalı'}
+            </button>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="t-title">"YouTube Music'te Aç" Butonu</span>
+              <span class="t-desc muted">Arkadaşlarının parçayı tek tıkla açabilmesi için buton ekle.</span>
+            </div>
+            <button
+              class="btn toggle-btn"
+              class:accent={player.settings.discordShowButton}
+              onclick={() => player.updateSettings({ discordShowButton: !player.settings.discordShowButton })}
+            >
+              {player.settings.discordShowButton ? 'Açık' : 'Kapalı'}
+            </button>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="t-title">Duraklatılınca Durumu Temizle</span>
+              <span class="t-desc muted">Müzik durduğunda "Duraklatıldı" yazmak yerine Discord durumunu tamamen kaldır.</span>
+            </div>
+            <button
+              class="btn toggle-btn"
+              class:accent={player.settings.discordClearOnPause}
+              onclick={() => player.updateSettings({ discordClearOnPause: !player.settings.discordClearOnPause })}
+            >
+              {player.settings.discordClearOnPause ? 'Açık' : 'Kapalı'}
+            </button>
+          </div>
+        </div>
+      {:else}
+        <div class="d-disabled-msg">
+          <p class="muted">Discord Zengin Varlık özelliği şu anda kapalı. Açıldığında dinlediğin parçalar anında Discord profilinde canlı olarak görüntülenir.</p>
+        </div>
+      {/if}
     </div>
 
     <div class="card block span-2">
@@ -1213,31 +1333,204 @@
     flex-shrink: 0;
     font-weight: 700;
   }
-  .discord-cfg-row {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .discord-input-wrap {
+  /* Discord Block & Simulation Card */
+  .discord-block {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
+    flex-direction: column;
+    gap: 14px;
   }
-  .discord-input {
-    width: 200px;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
+  .discord-block-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .discord-sim-card {
+    background: #1e1f22;
     border: 2px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    font: inherit;
-    font-size: 12.5px;
-    font-weight: 700;
+    border-radius: var(--radius);
+    padding: 14px 16px;
     box-shadow: 0 var(--edge-depth) 0 var(--edge);
   }
-  .discord-input:focus {
-    outline: none;
-    border-color: var(--accent);
+  .d-sim-user-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .d-sim-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .d-sim-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .d-sim-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--surface-3);
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+  }
+  .d-sim-status-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 10px;
+    height: 10px;
+    background: #23a55a;
+    border-radius: 50%;
+    border: 2px solid #1e1f22;
+  }
+  .d-sim-user-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .d-sim-username {
+    font-size: 13px;
+    font-weight: 800;
+    color: #f2f3f5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .d-sim-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #949ba4;
+  }
+  .d-sim-activity-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #b5bac1;
+    letter-spacing: 0.04em;
+  }
+  .d-sim-activity-box {
+    margin-top: 10px;
+    background: #2b2d31;
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .d-sim-act-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .d-sim-cover-wrap {
+    width: 58px;
+    height: 58px;
+    border-radius: 8px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .d-sim-cover {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  .d-sim-cover-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    background: #1e1f22;
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+  }
+  .d-sim-badge-dot {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #23a55a;
+    border: 2px solid #2b2d31;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+  }
+  .d-sim-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .d-sim-app-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #f2f3f5;
+  }
+  .d-sim-song {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #dbdee1;
+  }
+  .d-sim-artist {
+    font-size: 11.5px;
+    color: #949ba4;
+  }
+  .d-sim-progress-wrap {
+    margin-top: 6px;
+    width: 100%;
+  }
+  .d-sim-bar-bg {
+    height: 4px;
+    border-radius: 2px;
+    background: #4e5058;
+    overflow: hidden;
+  }
+  .d-sim-bar-fill {
+    height: 100%;
+    background: #ffffff;
+    border-radius: 2px;
+    transition: width 200ms linear;
+  }
+  .d-sim-time-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: #949ba4;
+    margin-top: 3px;
+    font-family: monospace;
+  }
+  .d-sim-action-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    background: #4e5058;
+    color: #ffffff;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  }
+  .d-custom-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .d-disabled-msg {
+    padding: 20px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    text-align: center;
+    border: 2px dashed var(--border);
   }
   .about-grid {
     display: grid;

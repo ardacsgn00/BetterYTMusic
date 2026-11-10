@@ -61,6 +61,10 @@ export interface AppSettings {
   autoplay: boolean;
   discordRpc: boolean;
   discordClientId: string;
+  discordShowCover: boolean;
+  discordShowTime: boolean;
+  discordShowButton: boolean;
+  discordClearOnPause: boolean;
 }
 
 export interface UpdateCheckResult {

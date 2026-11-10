@@ -10,6 +10,10 @@ fn default_true() -> bool {
     true
 }
 
+fn default_false() -> bool {
+    false
+}
+
 fn default_discord_id() -> String {
     "1569629580694655006".to_string()
 }
@@ -26,6 +30,14 @@ pub struct AppSettings {
     pub discord_rpc: bool,
     #[serde(default = "default_discord_id")]
     pub discord_client_id: String,
+    #[serde(default = "default_true")]
+    pub discord_show_cover: bool,
+    #[serde(default = "default_true")]
+    pub discord_show_time: bool,
+    #[serde(default = "default_true")]
+    pub discord_show_button: bool,
+    #[serde(default = "default_false")]
+    pub discord_clear_on_pause: bool,
 }
 
 impl Default for AppSettings {
@@ -37,6 +49,10 @@ impl Default for AppSettings {
             autoplay: true,
             discord_rpc: true,
             discord_client_id: default_discord_id(),
+            discord_show_cover: true,
+            discord_show_time: true,
+            discord_show_button: true,
+            discord_clear_on_pause: false,
         }
     }
 }

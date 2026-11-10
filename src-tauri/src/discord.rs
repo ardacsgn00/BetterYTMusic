@@ -52,12 +52,19 @@ fn run_loop(app: AppHandle, rx: Receiver<DiscordUpdate>) {
 
     loop {
         // Fetch current settings
-        let (enabled, client_id) = {
+        let (enabled, client_id, show_cover, show_time, show_button, clear_on_pause) = {
             if let Some(mgr) = app.try_state::<Arc<SettingsManager>>() {
                 let s = mgr.get();
-                (s.discord_rpc, s.discord_client_id.trim().to_string())
+                (
+                    s.discord_rpc,
+                    s.discord_client_id.trim().to_string(),
+                    s.discord_show_cover,
+                    s.discord_show_time,
+                    s.discord_show_button,
+                    s.discord_clear_on_pause,
+                )
             } else {
-                (true, "1569629580694655006".to_string())
+                (true, "1569629580694655006".to_string(), true, true, true, false)
             }
         };
 
@@ -142,6 +149,12 @@ fn run_loop(app: AppHandle, rx: Receiver<DiscordUpdate>) {
             continue;
         };
 
+        if !upd.is_playing && clear_on_pause {
+            let _ = c.clear_activity();
+            last_send = Instant::now();
+            continue;
+        }
+
         let title = sanitize_str(&track.title, "Müzik");
         let artist = sanitize_str(&track.artist, "Bilinmeyen Sanatçı");
         let album = if track.album.trim().is_empty() {
@@ -165,26 +178,30 @@ fn run_loop(app: AppHandle, rx: Receiver<DiscordUpdate>) {
 
         if upd.is_playing {
             act = act.state(&artist);
-            let start_ts = now_sec - pos_sec;
-            let mut ts = activity::Timestamps::new().start(start_ts);
-            if dur_sec > pos_sec && dur_sec > 0 {
-                ts = ts.end(start_ts + dur_sec);
+            if show_time {
+                let start_ts = now_sec - pos_sec;
+                let mut ts = activity::Timestamps::new().start(start_ts);
+                if dur_sec > pos_sec && dur_sec > 0 {
+                    ts = ts.end(start_ts + dur_sec);
+                }
+                act = act.timestamps(ts);
             }
-            act = act.timestamps(ts);
         } else {
             act = act.state(&safe_paused_state);
         }
 
         let mut assets = activity::Assets::new();
-        if let Some(thumb) = &track.thumbnail {
-            if thumb.starts_with("http://") || thumb.starts_with("https://") {
-                assets = assets.large_image(thumb);
+        if show_cover {
+            if let Some(thumb) = &track.thumbnail {
+                if thumb.starts_with("http://") || thumb.starts_with("https://") {
+                    assets = assets.large_image(thumb);
+                }
             }
         }
         assets = assets.large_text(&album);
         act = act.assets(assets);
 
-        let yt_url = if !track.id.is_empty() {
+        let yt_url = if show_button && !track.id.is_empty() {
             format!("https://music.youtube.com/watch?v={}", track.id)
         } else {
             String::new()
