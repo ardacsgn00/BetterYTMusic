@@ -607,19 +607,19 @@
         </div>
         <button
           class="btn toggle-btn"
-          class:accent={player.settings.discordRpc}
-          onclick={() => player.updateSettings({ discordRpc: !player.settings.discordRpc })}
+          class:accent={player.settings.discordRpc ?? true}
+          onclick={() => player.updateSettings({ discordRpc: !(player.settings.discordRpc ?? true) })}
         >
-          {player.settings.discordRpc ? 'Açık' : 'Kapalı'}
+          {(player.settings.discordRpc ?? true) ? 'Açık' : 'Kapalı'}
         </button>
       </div>
 
-      {#if player.settings.discordRpc}
+      {#if player.settings.discordRpc ?? true}
         <!-- Discord Profile Card Simulation -->
         <div class="discord-sim-card">
           <div class="d-sim-user-bar">
             <div class="d-sim-avatar">
-              {#if player.state.track?.thumbnail && player.settings.discordShowCover}
+              {#if player.state.track?.thumbnail && (player.settings.discordShowCover ?? true)}
                 <img src={player.state.track.thumbnail} alt="" class="d-sim-avatar-img" />
               {:else}
                 <div class="d-sim-avatar-fallback">
@@ -639,7 +639,7 @@
 
           <div class="d-sim-activity-box">
             <div class="d-sim-act-main">
-              {#if player.settings.discordShowCover}
+              {#if player.settings.discordShowCover ?? true}
                 <div class="d-sim-cover-wrap">
                   {#if player.state.track?.thumbnail}
                     <img src={player.state.track.thumbnail} alt="" class="d-sim-cover" />
@@ -660,14 +660,14 @@
                   {player.state.track?.title || 'IMMIGRANT'}
                 </span>
                 <span class="d-sim-artist truncate muted">
-                  {#if !player.state.isPlaying && !player.settings.discordClearOnPause}
+                  {#if !player.state.isPlaying && !(player.settings.discordClearOnPause ?? false)}
                     Duraklatıldı • {player.state.track?.artist || 'ALIZADE'}
                   {:else}
                     {player.state.track?.artist || 'ALIZADE'}
                   {/if}
                 </span>
 
-                {#if player.settings.discordShowTime}
+                {#if player.settings.discordShowTime ?? true}
                   {@const curSec = Math.floor(player.position / 1000)}
                   {@const durSec = Math.max(1, Math.floor((player.state.track?.durationMs || 180000) / 1000))}
                   {@const pct = Math.min(100, Math.max(0, (curSec / durSec) * 100))}
@@ -684,7 +684,7 @@
               </div>
             </div>
 
-            {#if player.settings.discordShowButton}
+            {#if player.settings.discordShowButton ?? true}
               <div class="d-sim-action-btn">
                 <Icon name="link" size={13} />
                 YouTube Music'te Aç
@@ -702,10 +702,10 @@
             </div>
             <button
               class="btn toggle-btn"
-              class:accent={player.settings.discordShowCover}
-              onclick={() => player.updateSettings({ discordShowCover: !player.settings.discordShowCover })}
+              class:accent={player.settings.discordShowCover ?? true}
+              onclick={() => player.updateSettings({ discordShowCover: !(player.settings.discordShowCover ?? true) })}
             >
-              {player.settings.discordShowCover ? 'Açık' : 'Kapalı'}
+              {(player.settings.discordShowCover ?? true) ? 'Açık' : 'Kapalı'}
             </button>
           </div>
 
@@ -716,10 +716,10 @@
             </div>
             <button
               class="btn toggle-btn"
-              class:accent={player.settings.discordShowTime}
-              onclick={() => player.updateSettings({ discordShowTime: !player.settings.discordShowTime })}
+              class:accent={player.settings.discordShowTime ?? true}
+              onclick={() => player.updateSettings({ discordShowTime: !(player.settings.discordShowTime ?? true) })}
             >
-              {player.settings.discordShowTime ? 'Açık' : 'Kapalı'}
+              {(player.settings.discordShowTime ?? true) ? 'Açık' : 'Kapalı'}
             </button>
           </div>
 
@@ -730,10 +730,10 @@
             </div>
             <button
               class="btn toggle-btn"
-              class:accent={player.settings.discordShowButton}
-              onclick={() => player.updateSettings({ discordShowButton: !player.settings.discordShowButton })}
+              class:accent={player.settings.discordShowButton ?? true}
+              onclick={() => player.updateSettings({ discordShowButton: !(player.settings.discordShowButton ?? true) })}
             >
-              {player.settings.discordShowButton ? 'Açık' : 'Kapalı'}
+              {(player.settings.discordShowButton ?? true) ? 'Açık' : 'Kapalı'}
             </button>
           </div>
 
@@ -744,10 +744,10 @@
             </div>
             <button
               class="btn toggle-btn"
-              class:accent={player.settings.discordClearOnPause}
-              onclick={() => player.updateSettings({ discordClearOnPause: !player.settings.discordClearOnPause })}
+              class:accent={player.settings.discordClearOnPause ?? false}
+              onclick={() => player.updateSettings({ discordClearOnPause: !(player.settings.discordClearOnPause ?? false) })}
             >
-              {player.settings.discordClearOnPause ? 'Açık' : 'Kapalı'}
+              {(player.settings.discordClearOnPause ?? false) ? 'Açık' : 'Kapalı'}
             </button>
           </div>
         </div>
