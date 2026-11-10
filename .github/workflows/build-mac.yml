@@ -35,7 +35,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Setup Rust stable
@@ -64,3 +64,4 @@ jobs:
           name: BetterYTMusic-macOS-${{ matrix.arch }}
           path: src-tauri/target/${{ matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/*.dmg
           if-no-files-found: warn
+
