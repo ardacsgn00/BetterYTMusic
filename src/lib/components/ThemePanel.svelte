@@ -595,6 +595,46 @@
             {player.settings.startMinimized ? 'Açık' : 'Kapalı'}
           </button>
         </div>
+
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="t-title">Discord Zengin Varlık (Rich Presence)</span>
+            <span class="t-desc muted">Discord profilinde çalan şarkıyı, sanatçıyı, albüm kapağını ve canlı süre çubuğunu göster.</span>
+          </div>
+          <button
+            class="btn toggle-btn"
+            class:accent={player.settings.discordRpc}
+            onclick={() => player.updateSettings({ discordRpc: !player.settings.discordRpc })}
+          >
+            {player.settings.discordRpc ? 'Açık' : 'Kapalı'}
+          </button>
+        </div>
+
+        {#if player.settings.discordRpc}
+          <div class="toggle-row discord-cfg-row">
+            <div class="toggle-text">
+              <span class="t-title">Discord Uygulama Kimliği (Client ID)</span>
+              <span class="t-desc muted">Discord Developer Portal'daki BetterYTMusic uygulama kimliği.</span>
+            </div>
+            <div class="discord-input-wrap">
+              <input
+                type="text"
+                class="discord-input"
+                bind:value={player.settings.discordClientId}
+                placeholder="1569629580694655006"
+                onchange={(e) => player.updateSettings({ discordClientId: e.currentTarget.value.trim() })}
+              />
+              <button
+                type="button"
+                class="btn sm"
+                title="Varsayılan ID'ye Dönüştür"
+                onclick={() => player.updateSettings({ discordClientId: '1569629580694655006' })}
+              >
+                Sıfırla
+              </button>
+            </div>
+          </div>
+        {/if}
       </div>
     </div>
 
@@ -1172,6 +1212,32 @@
     min-width: 78px;
     flex-shrink: 0;
     font-weight: 700;
+  }
+  .discord-cfg-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .discord-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .discord-input {
+    width: 200px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .discord-input:focus {
+    outline: none;
+    border-color: var(--accent);
   }
   .about-grid {
     display: grid;

@@ -264,6 +264,7 @@ pub struct PlayerController {
     innertube: Arc<Innertube>,
     player: Mutex<Player>,
     media: Mutex<Option<MediaSender>>,
+    discord: Mutex<Option<crate::discord::DiscordSender>>,
     taskbar: Mutex<Option<TaskbarHandle>>,
     last_track_id: Mutex<Option<String>>,
     last_autoplay_id: Mutex<Option<String>>,
@@ -279,6 +280,7 @@ impl PlayerController {
             innertube: innertube.clone(),
             player: Mutex::new(Player::new(Box::new(RodioEngine::new(innertube)), queue)),
             media: Mutex::new(None),
+            discord: Mutex::new(None),
             taskbar: Mutex::new(None),
             last_track_id: Mutex::new(None),
             last_autoplay_id: Mutex::new(None),
@@ -287,6 +289,10 @@ impl PlayerController {
 
     pub fn attach_media(&self, tx: Option<MediaSender>) {
         *lock(&self.media) = tx;
+    }
+
+    pub fn attach_discord(&self, tx: Option<crate::discord::DiscordSender>) {
+        *lock(&self.discord) = tx;
     }
 
     pub fn attach_taskbar(&self, tb: Option<TaskbarHandle>) {
@@ -321,27 +327,36 @@ impl PlayerController {
         }
 
         let media = lock(&self.media);
-        let Some(tx) = media.as_ref() else { return };
-
-        // Only push metadata when the track actually changes.
-        let id = snap.track.as_ref().map(|t| t.id.clone());
-        let mut last = lock(&self.last_track_id);
-        if *last != id {
-            *last = id;
-            if let Some(t) = &snap.track {
-                let _ = tx.send(MediaUpdate::Metadata {
-                    title: t.title.clone(),
-                    artist: t.artist.clone(),
-                    album: t.album.clone(),
-                    cover_url: t.thumbnail.clone(),
-                    duration_ms: t.duration_ms,
-                });
+        if let Some(tx) = media.as_ref() {
+            // Only push metadata when the track actually changes.
+            let id = snap.track.as_ref().map(|t| t.id.clone());
+            let mut last = lock(&self.last_track_id);
+            if *last != id {
+                *last = id;
+                if let Some(t) = &snap.track {
+                    let _ = tx.send(MediaUpdate::Metadata {
+                        title: t.title.clone(),
+                        artist: t.artist.clone(),
+                        album: t.album.clone(),
+                        cover_url: t.thumbnail.clone(),
+                        duration_ms: t.duration_ms,
+                    });
+                }
             }
+            let _ = tx.send(MediaUpdate::Playback {
+                playing: snap.is_playing,
+                position_ms: snap.position_ms,
+            });
         }
-        let _ = tx.send(MediaUpdate::Playback {
-            playing: snap.is_playing,
-            position_ms: snap.position_ms,
-        });
+
+        let discord = lock(&self.discord);
+        if let Some(tx) = discord.as_ref() {
+            let _ = tx.send(crate::discord::DiscordUpdate {
+                track: snap.track.clone(),
+                is_playing: snap.is_playing,
+                position_ms: snap.position_ms,
+            });
+        }
     }
 
     /// Detects natural end-of-track and advances the queue, and updates duration if newly decoded.

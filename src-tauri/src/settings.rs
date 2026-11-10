@@ -10,6 +10,10 @@ fn default_true() -> bool {
     true
 }
 
+fn default_discord_id() -> String {
+    "1569629580694655006".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
@@ -18,6 +22,10 @@ pub struct AppSettings {
     pub start_minimized: bool,
     #[serde(default = "default_true")]
     pub autoplay: bool,
+    #[serde(default = "default_true")]
+    pub discord_rpc: bool,
+    #[serde(default = "default_discord_id")]
+    pub discord_client_id: String,
 }
 
 impl Default for AppSettings {
@@ -27,6 +35,8 @@ impl Default for AppSettings {
             launch_on_startup: false,
             start_minimized: false,
             autoplay: true,
+            discord_rpc: true,
+            discord_client_id: default_discord_id(),
         }
     }
 }

@@ -1,4 +1,5 @@
 mod commands;
+mod discord;
 mod innertube;
 mod media;
 mod miniwin;
@@ -43,6 +44,10 @@ pub fn run() {
             // OS media controls (SMTC / MPRIS / NowPlaying) + hardware media keys.
             let media_tx = media::spawn(&handle);
             app.state::<PlayerController>().attach_media(media_tx);
+
+            // Discord Rich Presence
+            let discord_tx = discord::spawn(&handle);
+            app.state::<PlayerController>().attach_discord(discord_tx);
 
             player::spawn_ticker(handle.clone());
 

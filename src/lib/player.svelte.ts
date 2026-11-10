@@ -44,7 +44,9 @@ class PlayerStore {
     closeToTray: true,
     launchOnStartup: false,
     startMinimized: false,
-    autoplay: true
+    autoplay: true,
+    discordRpc: true,
+    discordClientId: '1569629580694655006',
   });
   lyrics = $state<LyricsData | null>(null);
   lyricsLoading = $state(false);

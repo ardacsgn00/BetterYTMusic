@@ -59,6 +59,8 @@ export interface AppSettings {
   launchOnStartup: boolean;
   startMinimized: boolean;
   autoplay: boolean;
+  discordRpc: boolean;
+  discordClientId: string;
 }
 
 export interface UpdateCheckResult {

@@ -7,7 +7,7 @@
 **Hafif, hızlı ve kişiselleştirilebilir masaüstü YouTube Music istemcisi**  
 *Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows*
 
-[![Version](https://img.shields.io/badge/version-v0.23.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Version](https://img.shields.io/badge/version-v0.24.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Platform](https://img.shields.io/badge/platform-Windows-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Built with Tauri](https://img.shields.io/badge/Tauri_2-Rust_%2B_Svelte_5-06d6a0?style=for-the-badge)](https://tauri.app)
 [![Developer](https://img.shields.io/badge/Geli%C5%9Ftirici-Arda_Co%C5%9Fgun-8338ec?style=for-the-badge)](https://github.com/ardacsgn00)
@@ -29,7 +29,8 @@
 - **🎤 Senkronize Şarkı Sözleri (Lyrics):**
   - Saniyeye duyarlı (`LRC`) otomatik kayan şarkı sözleri ve herhangi bir söz satırına tıklayarak şarkıyı doğrudan o saniyeye sarabilme.
   - Geniş ekranlarda **Kapak | Şarkı Sözleri | Sıradaki** şeklinde 3 sütunlu yan yana görünüm desteği.
-- **🖥️ Tam Masaüstü & Windows Entegrasyonu:**
+- **🖥️ Tam Masaüstü, Discord & Windows Entegrasyonu:**
+  - **Discord Zengin Varlık (Rich Presence):** Discord profilinde anlık dinleme durumu; şarkı adı, sanatçı, albüm kapağı, canlı akan süre çubuğu ve arkadaşlarının şarkıyı tek tıkla dinleyebileceği "YouTube Music'te Aç" butonu.
   - **Görev Çubuğu Önizleme Kontrolleri (`ITaskbarList3`):** Görev çubuğunda uygulama simgesinin üzerine gelindiğinde Spotify benzeri **Önceki / Oynat-Duraklat / Sonraki** düğmeleri.
   - **Sistem Medya Kontrolleri (SMTC):** Klavyedeki medya tuşları (`Play/Pause`, `Next`, `Prev`) ve Windows ses kaplaması ile tam uyum.
   - **Sistem Tepsisi (System Tray) & Otomatik Başlatma:** Pencere kapatıldığında sistem tepsisinde arka planda çalmaya devam etme, Windows açılışında otomatik çalışma ve küçültülmüş başlatma seçenekleri.
