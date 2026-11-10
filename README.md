@@ -5,10 +5,10 @@
 # BetterYTMusic
 
 **Hafif, hızlı ve kişiselleştirilebilir masaüstü YouTube Music istemcisi**  
-*Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows*
+*Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows & macOS*
 
 [![Version](https://img.shields.io/badge/version-v0.26.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
-[![Platform](https://img.shields.io/badge/platform-Windows-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Built with Tauri](https://img.shields.io/badge/Tauri_2-Rust_%2B_Svelte_5-06d6a0?style=for-the-badge)](https://tauri.app)
 [![Developer](https://img.shields.io/badge/Geli%C5%9Ftirici-Arda_Co%C5%9Fgun-8338ec?style=for-the-badge)](https://github.com/ardacsgn00)
 
@@ -29,11 +29,11 @@
 - **🎤 Senkronize Şarkı Sözleri (Lyrics):**
   - Saniyeye duyarlı (`LRC`) otomatik kayan şarkı sözleri ve herhangi bir söz satırına tıklayarak şarkıyı doğrudan o saniyeye sarabilme.
   - Geniş ekranlarda **Kapak | Şarkı Sözleri | Sıradaki** şeklinde 3 sütunlu yan yana görünüm desteği.
-- **🖥️ Tam Masaüstü, Discord & Windows Entegrasyonu:**
+- **🖥️ Çapraz Platform Masaüstü & Discord Entegrasyonu:**
   - **Discord Zengin Varlık (Rich Presence):** Discord profilinde anlık dinleme durumu; şarkı adı, sanatçı, albüm kapağı, canlı akan süre çubuğu ve arkadaşlarının şarkıyı tek tıkla dinleyebileceği "YouTube Music'te Aç" butonu.
-  - **Görev Çubuğu Önizleme Kontrolleri (`ITaskbarList3`):** Görev çubuğunda uygulama simgesinin üzerine gelindiğinde Spotify benzeri **Önceki / Oynat-Duraklat / Sonraki** düğmeleri.
-  - **Sistem Medya Kontrolleri (SMTC):** Klavyedeki medya tuşları (`Play/Pause`, `Next`, `Prev`) ve Windows ses kaplaması ile tam uyum.
-  - **Sistem Tepsisi (System Tray) & Otomatik Başlatma:** Pencere kapatıldığında sistem tepsisinde arka planda çalmaya devam etme, Windows açılışında otomatik çalışma ve küçültülmüş başlatma seçenekleri.
+  - **Windows Entegrasyonu:** Görev çubuğunda (`ITaskbarList3`) Spotify benzeri **Önceki / Oynat-Duraklat / Sonraki** küçük resim butonları ve Windows ses kaplaması (SMTC).
+  - **macOS Entegrasyonu:** Apple Silicon (M-serisi) ve Intel Mac desteği, yerel macOS `MPNowPlayingInfoCenter` medya tuşları, macOS `LaunchAgents` açılış servisi ve yerel WebKit motoruyla ultra düşük bellek tüketimi (~60-80 MB RAM).
+  - **Sistem Tepsisi (Tray) & Otomatik Başlatma:** Kapatıldığında arka planda çalma ve işletim sistemi başlangıcında otomatik başlatma.
 - **🎨 Dokunsal (Tactile) Arayüz & Geniş Kişiselleştirme:**
   - **5 Tema Modu:** Koyu, Gece Siyahı (OLED), Kuzey Mavisi, Açık ve Sistem.
   - **10 Vurgu Rengi + Özel Renk Seçici**, **5 Yazı Tipi Ailesi**, metin ölçeği, liste yoğunluğu, köşe yuvarlaklığı ve ayarlanabilir **3B Dokunsal Alt Kenar (`0px` – `6px`)**.
@@ -41,9 +41,22 @@
 
 ---
 
-## 🚀 Hızlı Kullanım (Tek Dosya `.exe`)
+## 🚀 Hızlı Kullanım & İndirme
 
-Herhangi bir Rust veya Node.js kurulumuna gerek kalmadan doğrudan depodaki **[`BetterYTMusic.exe`](./BetterYTMusic.exe)** dosyasını indirip çalıştırabilirsin. Tüm ses motoru ve arayüz tek `.exe` (~8 MB) içerisine gömülüdür.
+### Windows (Tek Dosya `.exe`)
+Herhangi bir kurulum gerektirmeden doğrudan depodaki **[`BetterYTMusic.exe`](./BetterYTMusic.exe)** dosyasını indirip çalıştırabilirsin. Tüm ses motoru ve arayüz tek `.exe` (~9 MB) içerisine gömülüdür.
+
+### macOS (Apple Silicon & Intel DMG)
+macOS sürümleri GitHub Actions üzerinde otomatik olarak hem **Apple Silicon (M1/M2/M3/M4)** hem de **Intel Mac'ler (x86_64)** için ayrı ayrı `.dmg` paketleri olarak derlenmektedir.
+
+1. **İndirme:**
+   - [GitHub Actions - Build macOS DMG](https://github.com/ardacsgn00/BetterYTMusic/actions/workflows/build-mac.yml) sayfasına gidin.
+   - En son başarılı çalışan iş akışına tıklayıp sayfanın altındaki **Artifacts** bölümünden cihazınıza uygun paketi indirin:
+     - **Intel Mac'ler için:** `BetterYTMusic-macOS-x86_64`
+     - **Apple Silicon için:** `BetterYTMusic-macOS-aarch64`
+   - *Not: GitHub Artifacts dosyalarını indirebilmek için GitHub hesabınıza giriş yapmış olmanız gerekir. İndirdiğiniz zip arşivini açtığınızda içinden `.dmg` kurulum dosyası çıkacaktır.*
+2. **macOS İlk Açılış İzni:**
+   - Apple Geliştirici sertifikası bulunmayan açık kaynak uygulamalarda olduğu gibi, ilk açılışta *"Geliştirici doğrulanamadı"* uyarısı alırsanız: uygulamaya **Sağ Tık (veya Control + Sol Tık) -> Aç** diyerek tek seferlik onay verebilirsiniz.
 
 ---
 
