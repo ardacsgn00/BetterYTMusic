@@ -292,7 +292,11 @@ pub fn app_open_url(url: String) -> Result<(), String> {
             .spawn()
             .map_err(|e| e.to_string())?;
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open").arg(trimmed).spawn();
+    }
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     {
         let _ = std::process::Command::new("xdg-open").arg(trimmed).spawn();
     }

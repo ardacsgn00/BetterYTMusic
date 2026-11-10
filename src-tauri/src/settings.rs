@@ -88,7 +88,7 @@ impl SettingsManager {
                 if let Ok(mut g) = self.inner.lock() {
                     *g = saved.clone();
                 }
-                apply_windows_startup(saved.launch_on_startup, saved.start_minimized);
+                apply_platform_startup(saved.launch_on_startup, saved.start_minimized);
             }
         }
         if let Ok(mut f) = self.file.lock() {
@@ -114,13 +114,13 @@ impl SettingsManager {
                 }
             }
         }
-        apply_windows_startup(next.launch_on_startup, next.start_minimized);
+        apply_platform_startup(next.launch_on_startup, next.start_minimized);
         next
     }
 }
 
 #[cfg(target_os = "windows")]
-fn apply_windows_startup(enable: bool, minimized: bool) {
+fn apply_platform_startup(enable: bool, minimized: bool) {
     use std::os::windows::process::CommandExt;
     use std::process::Command;
 
@@ -159,6 +159,51 @@ fn apply_windows_startup(enable: bool, minimized: bool) {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-fn apply_windows_startup(_enable: bool, _minimized: bool) {}
+#[cfg(target_os = "macos")]
+fn apply_platform_startup(enable: bool, minimized: bool) {
+    // macOS LaunchAgent (.plist) in ~/Library/LaunchAgents/com.betterytmusic.app.plist
+    if let Ok(home) = std::env::var("HOME") {
+        let plist_path = std::path::PathBuf::from(home)
+            .join("Library")
+            .join("LaunchAgents")
+            .join("com.betterytmusic.app.plist");
+
+        if enable {
+            if let Ok(exe) = std::env::current_exe() {
+                let exe_str = exe.to_string_lossy();
+                let arg_tag = if minimized {
+                    "        <string>--minimized</string>\n"
+                } else {
+                    ""
+                };
+                let plist_content = format!(
+                    r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.betterytmusic.app</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{exe_str}</string>
+{arg_tag}    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+"#
+                );
+                if let Some(parent) = plist_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let _ = std::fs::write(&plist_path, plist_content);
+            }
+        } else {
+            let _ = std::fs::remove_file(&plist_path);
+        }
+    }
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+fn apply_platform_startup(_enable: bool, _minimized: bool) {}
 
