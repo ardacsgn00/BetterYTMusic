@@ -655,7 +655,7 @@
               {/if}
 
               <div class="d-sim-meta">
-                <span class="d-sim-app-title">BetterYTMusic</span>
+                <span class="d-sim-app-title">{player.settings.discordAppName || 'BetterYTMusic'}</span>
                 <span class="d-sim-song truncate">
                   {player.state.track?.title || 'IMMIGRANT'}
                 </span>
@@ -683,18 +683,37 @@
                 {/if}
               </div>
             </div>
-
-            {#if player.settings.discordShowButton ?? true}
-              <div class="d-sim-action-btn">
-                <Icon name="link" size={13} />
-                YouTube Music'te Aç
-              </div>
-            {/if}
           </div>
         </div>
 
         <!-- Customization toggles -->
         <div class="d-custom-list">
+          <div class="toggle-row d-app-name-row">
+            <div class="toggle-text">
+              <span class="t-title">Discord Başlığı (Uygulama Adı)</span>
+              <span class="t-desc muted">Profil kartında üstte kalın harflerle görünecek başlık adı.</span>
+            </div>
+            <div class="d-app-name-wrap">
+              <input
+                type="text"
+                class="discord-input"
+                maxlength="32"
+                placeholder="BetterYTMusic"
+                value={player.settings.discordAppName || 'BetterYTMusic'}
+                onchange={(e) => player.updateSettings({ discordAppName: e.currentTarget.value.trim() || 'BetterYTMusic' })}
+              />
+              <button
+                type="button"
+                class="btn sm"
+                title="Varsayılan İsme Dönüştür"
+                onclick={() => player.updateSettings({ discordAppName: 'BetterYTMusic' })}
+                disabled={(player.settings.discordAppName || 'BetterYTMusic') === 'BetterYTMusic'}
+              >
+                Sıfırla
+              </button>
+            </div>
+          </div>
+
           <div class="toggle-row">
             <div class="toggle-text">
               <span class="t-title">Albüm Kapağı</span>
@@ -720,20 +739,6 @@
               onclick={() => player.updateSettings({ discordShowTime: !(player.settings.discordShowTime ?? true) })}
             >
               {(player.settings.discordShowTime ?? true) ? 'Açık' : 'Kapalı'}
-            </button>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-text">
-              <span class="t-title">"YouTube Music'te Aç" Butonu</span>
-              <span class="t-desc muted">Arkadaşlarının parçayı tek tıkla açabilmesi için buton ekle.</span>
-            </div>
-            <button
-              class="btn toggle-btn"
-              class:accent={player.settings.discordShowButton ?? true}
-              onclick={() => player.updateSettings({ discordShowButton: !(player.settings.discordShowButton ?? true) })}
-            >
-              {(player.settings.discordShowButton ?? true) ? 'Açık' : 'Kapalı'}
             </button>
           </div>
 
@@ -1505,25 +1510,36 @@
     margin-top: 3px;
     font-family: monospace;
   }
-  .d-sim-action-btn {
-    margin-top: 10px;
-    width: 100%;
-    padding: 8px 12px;
-    background: #4e5058;
-    color: #ffffff;
-    border-radius: 4px;
-    font-weight: 700;
-    font-size: 12.5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
-  }
   .d-custom-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+  .d-app-name-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .d-app-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .discord-input {
+    width: 170px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .discord-input:focus {
+    outline: none;
+    border-color: var(--accent);
   }
   .d-disabled-msg {
     padding: 20px;

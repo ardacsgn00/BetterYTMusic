@@ -47,9 +47,9 @@ class PlayerStore {
     autoplay: true,
     discordRpc: true,
     discordClientId: '1569629580694655006',
+    discordAppName: 'BetterYTMusic',
     discordShowCover: true,
     discordShowTime: true,
-    discordShowButton: true,
     discordClearOnPause: false,
   });
   lyrics = $state<LyricsData | null>(null);

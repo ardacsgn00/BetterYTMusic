@@ -52,19 +52,26 @@ fn run_loop(app: AppHandle, rx: Receiver<DiscordUpdate>) {
 
     loop {
         // Fetch current settings
-        let (enabled, client_id, show_cover, show_time, show_button, clear_on_pause) = {
+        let (enabled, client_id, app_name, show_cover, show_time, clear_on_pause) = {
             if let Some(mgr) = app.try_state::<Arc<SettingsManager>>() {
                 let s = mgr.get();
                 (
                     s.discord_rpc,
                     s.discord_client_id.trim().to_string(),
+                    s.discord_app_name.trim().to_string(),
                     s.discord_show_cover,
                     s.discord_show_time,
-                    s.discord_show_button,
                     s.discord_clear_on_pause,
                 )
             } else {
-                (true, "1569629580694655006".to_string(), true, true, true, false)
+                (
+                    true,
+                    "1569629580694655006".to_string(),
+                    "BetterYTMusic".to_string(),
+                    true,
+                    true,
+                    false,
+                )
             }
         };
 
@@ -163,8 +170,11 @@ fn run_loop(app: AppHandle, rx: Receiver<DiscordUpdate>) {
             sanitize_str(&track.album, &title)
         };
 
-        let mut act = activity::Activity::new();
-        act = act.details(&title);
+        let safe_app_name = sanitize_str(&app_name, "BetterYTMusic");
+        let mut act = activity::Activity::new()
+            .activity_type(activity::ActivityType::Listening)
+            .name(&safe_app_name)
+            .details(&title);
 
         let now_sec = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -200,17 +210,6 @@ fn run_loop(app: AppHandle, rx: Receiver<DiscordUpdate>) {
         }
         assets = assets.large_text(&album);
         act = act.assets(assets);
-
-        let yt_url = if show_button && !track.id.is_empty() {
-            format!("https://music.youtube.com/watch?v={}", track.id)
-        } else {
-            String::new()
-        };
-
-        if !yt_url.is_empty() {
-            let buttons = vec![activity::Button::new("YouTube Music'te Aç", &yt_url)];
-            act = act.buttons(buttons);
-        }
 
         match c.set_activity(act) {
             Ok(_) => {

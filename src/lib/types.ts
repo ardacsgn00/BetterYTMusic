@@ -61,9 +61,9 @@ export interface AppSettings {
   autoplay: boolean;
   discordRpc: boolean;
   discordClientId: string;
+  discordAppName: string;
   discordShowCover: boolean;
   discordShowTime: boolean;
-  discordShowButton: boolean;
   discordClearOnPause: boolean;
 }
 

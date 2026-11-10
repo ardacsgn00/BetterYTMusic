@@ -35,7 +35,7 @@
     theme.setUiStyle(style);
   }
 
-  const totalSteps = 4;
+  const totalSteps = 5;
   const isLast = $derived(currentStep === totalSteps - 1);
 
   function next() {
@@ -289,7 +289,64 @@
         </div>
 
       {:else if currentStep === 3}
-        <!-- Step 4: Library & Google Sync -->
+        <!-- Step 4: Discord Rich Presence -->
+        <div class="step-pane step-fade">
+          <div class="visual-wrap">
+            <div class="onboard-discord-card">
+              <div class="ob-d-head">
+                <div class="ob-d-user">
+                  <div class="ob-d-avatar">
+                    <Icon name="now" size={16} />
+                    <span class="ob-d-status-dot"></span>
+                  </div>
+                  <div class="ob-d-meta">
+                    <span class="ob-d-name">{player.auth.accountName || 'BetterYTMusic'}</span>
+                    <span class="ob-d-tag">BİR ŞEY DİNLİYOR</span>
+                  </div>
+                </div>
+                <span class="ob-d-badge">
+                  <Icon name="sparkles" size={12} /> Canlı Durum
+                </span>
+              </div>
+
+              <div class="ob-d-body">
+                <div class="ob-d-art" style:background-color={theme.accent}>
+                  <Icon name="music" size={24} />
+                  <span class="ob-d-play-pip">
+                    <Icon name="play" size={10} />
+                  </span>
+                </div>
+                <div class="ob-d-info">
+                  <span class="ob-d-title">{theme.appName.trim() || 'BetterYTMusic'}</span>
+                  <span class="ob-d-song truncate">{player.state.track?.title || 'Süpermix & Çalma Listeleri'}</span>
+                  <span class="ob-d-artist truncate muted">{player.state.track?.artist || 'YouTube Music Akışı'}</span>
+                  <div class="ob-d-progress">
+                    <div class="ob-d-bar">
+                      <div class="ob-d-bar-fill"></div>
+                    </div>
+                    <span class="ob-d-time">0:45 / 3:20</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="visual-badges">
+              <span class="stat-pill"><Icon name="sparkles" size={13} /> 0 Kurulum Gerekir</span>
+              <span class="stat-pill accent-pill"><Icon name="music" size={13} /> Dinliyor Durumu</span>
+              <span class="stat-pill"><Icon name="settings" size={13} /> Canlı Süre Çubuğu</span>
+            </div>
+          </div>
+
+          <div class="step-text">
+            <h2 class="step-title">Discord'da Dinleme Durumun Canlı</h2>
+            <p class="step-desc muted">
+              Müzik zevkini arkadaşlarınla paylaş. BetterYTMusic açıkken çalan şarkı, sanatçı ve canlı geçen süre Discord profilinde hiçbir ek ayar yapmadan doğrudan "Dinliyor" olarak görünür.
+            </p>
+          </div>
+        </div>
+
+      {:else if currentStep === 4}
+        <!-- Step 5: Library & Google Sync -->
         <div class="step-pane step-fade">
           <div class="visual-wrap">
             <div class="auth-card">
@@ -789,7 +846,158 @@
     justify-content: center;
   }
 
-  /* Step 4: Auth Card */
+  /* Step 4: Discord Card in Onboarding */
+  .onboard-discord-card {
+    width: min(450px, 100%);
+    padding: 14px 16px;
+    background: #1e1f22 !important;
+    border: 2px solid var(--border) !important;
+    border-radius: var(--radius);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 4px 0 var(--edge);
+  }
+  .ob-d-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ob-d-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .ob-d-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+    position: relative;
+  }
+  .ob-d-status-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 9px;
+    height: 9px;
+    background: #23a55a;
+    border-radius: 50%;
+    border: 2px solid #1e1f22;
+  }
+  .ob-d-meta {
+    display: flex;
+    flex-direction: column;
+  }
+  .ob-d-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: #f2f3f5;
+  }
+  .ob-d-tag {
+    font-size: 10px;
+    font-weight: 800;
+    color: #b5bac1;
+    letter-spacing: 0.04em;
+  }
+  .ob-d-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(35, 165, 90, 0.15);
+    color: #23a55a;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ob-d-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #2b2d31;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .ob-d-art {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .ob-d-play-pip {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #23a55a;
+    border: 2px solid #2b2d31;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+  }
+  .ob-d-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ob-d-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #f2f3f5;
+  }
+  .ob-d-song {
+    font-size: 12px;
+    font-weight: 700;
+    color: #dbdee1;
+  }
+  .ob-d-artist {
+    font-size: 11px;
+    color: #949ba4;
+  }
+  .ob-d-progress {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ob-d-bar {
+    flex: 1;
+    height: 4px;
+    background: #4e5058;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .ob-d-bar-fill {
+    height: 100%;
+    background: #ffffff;
+    border-radius: 2px;
+    animation: ob-flow 3.5s ease-in-out infinite alternate;
+  }
+  @keyframes ob-flow {
+    0% { width: 20%; }
+    100% { width: 85%; }
+  }
+  .ob-d-time {
+    font-size: 10px;
+    color: #949ba4;
+    font-family: monospace;
+  }
+
+  /* Step 5: Auth Card */
   .auth-card {
     width: min(440px, 100%);
     padding: 18px;
