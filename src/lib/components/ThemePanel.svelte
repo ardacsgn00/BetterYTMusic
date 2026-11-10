@@ -14,7 +14,7 @@
   } from '#lib/theme.svelte.ts';
   import { player } from '#lib/player.svelte.ts';
   import { mini } from '#lib/mini.svelte.ts';
-  import type { UpdateCheckResult, View } from '#lib/types.ts';
+  import type { UpdateCheckResult, View, SearchPlacement } from '#lib/types.ts';
   import Icon, { type IconName } from './Icon.svelte';
 
   const GITHUB_URL = 'https://github.com/ardacsgn00/betterytmusic';
@@ -100,6 +100,12 @@
     { id: 'now', label: 'Dinle' },
     { id: 'library', label: 'Kitaplık' },
     { id: 'search', label: 'Ara' }
+  ];
+
+  const searchPlacements: { id: SearchPlacement; label: string }[] = [
+    { id: 'tab', label: 'Kendi Sekmesinde' },
+    { id: 'home', label: 'Ana Sayfada' },
+    { id: 'both', label: 'İkisi De' }
   ];
 
   const isPreset = $derived(ACCENT_PRESETS.some((p) => p.value === theme.accent));
@@ -352,6 +358,30 @@
             </button>
           {/each}
         </div>
+      </div>
+
+      <div class="sub-group">
+        <span class="sub-label muted">Arama Özelliği Konumu</span>
+        <div class="opt-row">
+          {#each searchPlacements as sp (sp.id)}
+            <button
+              class="btn"
+              class:accent={theme.searchPlacement === sp.id}
+              onclick={() => theme.setSearchPlacement(sp.id)}
+            >
+              {sp.label}
+            </button>
+          {/each}
+        </div>
+        <p class="sub-desc muted">
+          {#if theme.searchPlacement === 'tab'}
+            Arama yalnızca sol menüdeki "Ara" sekmesinde yer alır.
+          {:else if theme.searchPlacement === 'home'}
+            Arama ana sayfada üst kısımda yer alır; sol menüdeki sekme gizlenir.
+          {:else}
+            Arama hem ana sayfada hem de sol menüdeki sekmede aktif olur.
+          {/if}
+        </p>
       </div>
 
       <div class="sub-group">
@@ -882,10 +912,12 @@
               </div>
               <div class="mw-nav-items">
                 {#each theme.sidebarNavOrder as navId (navId)}
-                  <div class="mw-nav-item" class:active={navId === 'now'}>
-                    <Icon name={NAV_INFO[navId].icon} size={11} />
-                    {#if !theme.sidebarCollapsed}<span class="truncate">{NAV_INFO[navId].label}</span>{/if}
-                  </div>
+                  {#if !(navId === 'search' && theme.searchPlacement === 'home')}
+                    <div class="mw-nav-item" class:active={navId === 'now'}>
+                      <Icon name={NAV_INFO[navId].icon} size={11} />
+                      {#if !theme.sidebarCollapsed}<span class="truncate">{NAV_INFO[navId].label}</span>{/if}
+                    </div>
+                  {/if}
                 {/each}
               </div>
             </div>
@@ -898,6 +930,13 @@
                   <span class="mw-head-sub muted">Kişisel miksler ve öneriler</span>
                 {/if}
               </div>
+
+              {#if theme.searchPlacement === 'home' || theme.searchPlacement === 'both'}
+                <div class="mw-search-mock">
+                  <Icon name="search" size={9} />
+                  <span>Müzik ara...</span>
+                </div>
+              {/if}
 
               <!-- Mini Cards Grid reflecting cardSize, radius, edgeDepth -->
               <div class="mw-cards-grid" data-size={theme.cardSize}>
@@ -1015,6 +1054,10 @@
             <div class="insp-badge">
               <span class="insp-k">Mini Oynatıcı:</span>
               <span class="insp-v">{theme.miniLayout === 'square' ? 'Kare Kart' : 'Yatay Şerit'}</span>
+            </div>
+            <div class="insp-badge">
+              <span class="insp-k">Arama Konumu:</span>
+              <span class="insp-v">{theme.searchPlacement === 'tab' ? 'Kendi Sekmesinde' : theme.searchPlacement === 'home' ? 'Ana Sayfada' : 'İkisi De'}</span>
             </div>
           </div>
           <div class="sim-tip-box">
@@ -1806,6 +1849,18 @@
   }
   .mw-head-sub {
     font-size: 9px;
+  }
+
+  .mw-search-mock {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    font-size: 8.5px;
+    color: var(--text-muted);
   }
 
   .mw-cards-grid {

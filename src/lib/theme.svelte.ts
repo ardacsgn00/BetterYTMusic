@@ -1,4 +1,4 @@
-import type { View } from '#lib/types.ts';
+import type { View, SearchPlacement } from '#lib/types.ts';
 
 export type ThemeMode = 'dark' | 'oled' | 'slate' | 'light' | 'system';
 export type FontId =
@@ -171,6 +171,8 @@ class ThemeStore {
   miniLayout = $state<MiniLayout>('strip');
   /** Mini player window position (physical px), remembered between sessions. */
   miniPos = $state<{ x: number; y: number } | null>(null);
+  /** Search feature placement ('tab' = sidebar only, 'home' = home page only, 'both' = both). */
+  searchPlacement = $state<SearchPlacement>('both');
 
   #media: MediaQueryList | null = null;
 
@@ -250,6 +252,9 @@ class ThemeStore {
       }
       if (saved.miniPos && typeof saved.miniPos.x === 'number' && typeof saved.miniPos.y === 'number') {
         this.miniPos = { x: saved.miniPos.x, y: saved.miniPos.y };
+      }
+      if (saved.searchPlacement === 'tab' || saved.searchPlacement === 'home' || saved.searchPlacement === 'both') {
+        this.searchPlacement = saved.searchPlacement;
       }
     } catch {
       /* ignore corrupt storage */
@@ -450,6 +455,12 @@ class ThemeStore {
     this.cardSize = 'normal';
     this.hideSubtitles = false;
     this.miniLayout = 'strip';
+    this.searchPlacement = 'both';
+    this.#apply();
+  }
+
+  setSearchPlacement(val: SearchPlacement) {
+    this.searchPlacement = val;
     this.#apply();
   }
 
@@ -502,7 +513,8 @@ class ThemeStore {
         cardSize: this.cardSize,
         hideSubtitles: this.hideSubtitles,
         miniLayout: this.miniLayout,
-        miniPos: this.miniPos
+        miniPos: this.miniPos,
+        searchPlacement: this.searchPlacement
       })
     );
   }

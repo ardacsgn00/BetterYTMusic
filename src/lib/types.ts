@@ -79,6 +79,8 @@ export type RepeatMode = 'off' | 'all' | 'one';
 
 export type View = 'now' | 'home' | 'search' | 'library' | 'theme';
 
+export type SearchPlacement = 'tab' | 'home' | 'both';
+
 export interface AuthStatus {
   loggedIn: boolean;
   accountName: string | null;

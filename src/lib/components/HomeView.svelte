@@ -4,7 +4,7 @@
   import { library } from '#lib/library.svelte.ts';
   import { theme } from '#lib/theme.svelte.ts';
   import { formatTime } from '#lib/format.ts';
-  import type { MoodCategory, PlaylistCard, Track } from '#lib/types.ts';
+  import type { MoodCategory, PlaylistCard, Track, ArtistCard } from '#lib/types.ts';
   import Cover from './Cover.svelte';
   import Icon from './Icon.svelte';
 
@@ -14,6 +14,61 @@
   let selectedMood = $state<MoodCategory | null>(null);
   let moodPlaylists = $state<PlaylistCard[]>([]);
   let loadingMood = $state(false);
+
+  // Home search state
+  let homeSearchQuery = $state('');
+  let homeActiveQuery = $state('');
+  let homeSongResults = $state<Track[]>([]);
+  let homePlaylistResults = $state<PlaylistCard[]>([]);
+  let homeArtistResult = $state<ArtistCard | null>(null);
+  let homeSearching = $state(false);
+  let homeSearched = $state(false);
+  let homeSearchError = $state<string | null>(null);
+
+  async function doHomeSearch(q = homeSearchQuery) {
+    const trimmed = q.trim();
+    if (!trimmed) return;
+    homeSearchQuery = trimmed;
+    homeActiveQuery = trimmed;
+    homeSearching = true;
+    homeSearchError = null;
+    homeSearched = true;
+
+    try {
+      const [songsRes, listsRes, artistRes] = await Promise.allSettled([
+        player.search(trimmed),
+        player.searchPlaylists(trimmed),
+        player.artistSearch(trimmed)
+      ]);
+
+      homeSongResults = songsRes.status === 'fulfilled' ? songsRes.value : [];
+      homePlaylistResults = listsRes.status === 'fulfilled' ? listsRes.value : [];
+      homeArtistResult = artistRes.status === 'fulfilled' ? artistRes.value : null;
+
+      if (songsRes.status === 'rejected' && listsRes.status === 'rejected') {
+        homeSearchError = 'Arama sonuçları alınamadı. Lütfen internet bağlantınızı kontrol edin.';
+      }
+    } catch (e) {
+      homeSearchError = String(e);
+    } finally {
+      homeSearching = false;
+    }
+  }
+
+  function clearHomeSearch() {
+    homeSearchQuery = '';
+    homeActiveQuery = '';
+    homeSongResults = [];
+    homePlaylistResults = [];
+    homeArtistResult = null;
+    homeSearched = false;
+    homeSearchError = null;
+  }
+
+  function onHomeSearchSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    doHomeSearch();
+  }
 
   let openedPlaylist = $state<PlaylistCard | null>(null);
   let openedTracks = $state<Track[]>([]);
@@ -314,6 +369,193 @@
         </button>
       </div>
     </header>
+
+    {#if theme.searchPlacement === 'home' || theme.searchPlacement === 'both'}
+      <div class="home-search-wrap">
+        <form class="home-search-form" onsubmit={onHomeSearchSubmit}>
+          <span class="home-search-icon"><Icon name="search" size={18} /></span>
+          <input
+            type="text"
+            class="home-search-input"
+            placeholder="Şarkı, sanatçı, albüm veya çalma listesi ara..."
+            bind:value={homeSearchQuery}
+          />
+          {#if homeSearchQuery.length > 0}
+            <button
+              type="button"
+              class="btn ghost icon home-search-clear-btn"
+              title="Aramayı Temizle"
+              aria-label="Aramayı Temizle"
+              onclick={clearHomeSearch}
+            >
+              <Icon name="close" size={16} />
+            </button>
+          {/if}
+          <button
+            type="submit"
+            class="btn accent home-search-btn"
+            disabled={homeSearching || !homeSearchQuery.trim()}
+          >
+            {homeSearching ? 'Aranıyor...' : 'Ara'}
+          </button>
+        </form>
+      </div>
+
+      {#if homeSearched}
+        <section class="home-search-results card">
+          <div class="hs-head">
+            <div class="hs-head-left">
+              <span class="hs-title">"{homeActiveQuery}" Arama Sonuçları</span>
+              <span class="hs-count muted">
+                {homeSongResults.length} şarkı, {homePlaylistResults.length} liste
+              </span>
+            </div>
+            <button
+              type="button"
+              class="btn sm hs-close-btn"
+              onclick={clearHomeSearch}
+            >
+              <Icon name="close" size={15} />
+              Sonuçları Kapat
+            </button>
+          </div>
+
+          {#if homeSearching}
+            <div class="msg hs-loading">
+              <p class="muted">Arama sonuçları getiriliyor...</p>
+            </div>
+          {:else if homeSearchError}
+            <div class="msg error">
+              <p>{homeSearchError}</p>
+            </div>
+          {:else if homeSongResults.length === 0 && homePlaylistResults.length === 0 && !homeArtistResult}
+            <div class="msg hs-empty">
+              <p class="muted">"{homeActiveQuery}" için herhangi bir sonuç bulunamadı.</p>
+            </div>
+          {:else}
+            <!-- Artist match -->
+            {#if homeArtistResult}
+              <div class="hs-artist-strip">
+                <button
+                  type="button"
+                  class="hs-artist-card"
+                  onclick={() => homeArtistResult && player.openArtist(homeArtistResult.name)}
+                >
+                  <div class="hs-artist-avatar">
+                    {#if homeArtistResult.thumbnail}
+                      <img src={homeArtistResult.thumbnail} alt="" draggable="false" />
+                    {:else}
+                      <Icon name="user" size={24} />
+                    {/if}
+                  </div>
+                  <div class="hs-artist-info">
+                    <span class="hs-artist-tag muted">SANATÇI PROFİLİ</span>
+                    <span class="hs-artist-name">{homeArtistResult.name}</span>
+                    {#if homeArtistResult.subscribers}
+                      <span class="hs-artist-subs muted">{homeArtistResult.subscribers} abone</span>
+                    {/if}
+                  </div>
+                  <span class="hs-artist-go">
+                    <Icon name="next" size={16} />
+                  </span>
+                </button>
+              </div>
+            {/if}
+
+            <!-- Songs -->
+            {#if homeSongResults.length > 0}
+              <div class="hs-section">
+                <h3 class="hs-sec-title">Şarkılar</h3>
+                <div class="hs-song-list">
+                  {#each homeSongResults.slice(0, 10) as track (track.id)}
+                    {@const isCurrent = player.state.track?.id === track.id}
+                    {@const isFav = library.isFavorite(track.id)}
+                    <div class="hs-song-row" class:active={isCurrent}>
+                      <!-- svelte-ignore a11y_click_events_have_key_events -->
+                      <!-- svelte-ignore a11y_no_static_element_interactions -->
+                      <div
+                        class="hs-song-hit"
+                        onclick={() => player.playTrack(track, homeSongResults, `Arama: ${homeActiveQuery}`)}
+                      >
+                        <Cover {track} size="42px" radius="calc(var(--radius) * 0.5)" />
+                        <div class="hs-song-meta">
+                          <span class="hs-song-title truncate">{track.title}</span>
+                          <span class="hs-song-artist truncate muted">
+                            <button
+                              type="button"
+                              class="artist-inline-btn"
+                              onclick={(e) => {
+                                e.stopPropagation();
+                                player.openArtist(track.artist);
+                              }}
+                            >
+                              {track.artist}
+                            </button>
+                            {#if track.album}
+                              <span class="album-tag"> · {track.album}</span>
+                            {/if}
+                          </span>
+                        </div>
+                        <span class="hs-song-dur muted">{track.durationMs ? formatTime(track.durationMs) : ''}</span>
+                      </div>
+                      <div class="hs-song-actions">
+                        <button
+                          type="button"
+                          class="btn ghost icon sm"
+                          title="Şarkı Radyosu Başlat"
+                          aria-label="Şarkı Radyosu Başlat"
+                          onclick={() => player.startRadio(track)}
+                        >
+                          <Icon name="radio" size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          class="btn ghost icon sm fav"
+                          class:on={isFav}
+                          title={isFav ? 'Kitaplıktan Çıkar' : 'Kitaplığa Ekle'}
+                          aria-label={isFav ? 'Kitaplıktan Çıkar' : 'Kitaplığa Ekle'}
+                          onclick={() => library.toggle(track)}
+                        >
+                          <Icon name={isFav ? 'heart-fill' : 'heart'} size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+
+            <!-- Playlists & Albums -->
+            {#if homePlaylistResults.length > 0}
+              <div class="hs-section">
+                <h3 class="hs-sec-title">Çalma Listeleri & Albümler</h3>
+                <div class="hs-pl-grid">
+                  {#each homePlaylistResults.slice(0, 8) as pl (pl.playlistId)}
+                    <button
+                      type="button"
+                      class="hs-pl-card"
+                      onclick={() => openPlaylistView(pl)}
+                    >
+                      <div class="hs-pl-art" style:background-color={pl.color}>
+                        {#if pl.thumbnail}
+                          <img src={pl.thumbnail} alt="" draggable="false" />
+                        {:else}
+                          <Icon name="music" size={24} />
+                        {/if}
+                      </div>
+                      <div class="hs-pl-info">
+                        <span class="hs-pl-title truncate">{pl.title}</span>
+                        <span class="hs-pl-sub truncate muted">{pl.subtitle}</span>
+                      </div>
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+          {/if}
+        </section>
+      {/if}
+    {/if}
 
     {#if moodCategories.length > 0}
       <div class="mood-bar">
@@ -1169,6 +1411,274 @@
     gap: 4px;
   }
 
+  /* Home search bar */
+  .home-search-wrap {
+    width: 100%;
+  }
+  .home-search-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px 6px 14px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+    transition: border-color 0.15s ease;
+  }
+  .home-search-form:focus-within {
+    border-color: var(--accent);
+  }
+  .home-search-icon {
+    color: var(--text-muted);
+    display: flex;
+    flex-shrink: 0;
+  }
+  .home-search-input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14.5px;
+    outline: none;
+    min-width: 0;
+  }
+  .home-search-clear-btn {
+    padding: 6px;
+    color: var(--text-muted);
+  }
+  .home-search-btn {
+    padding: 6px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* Home search results panel */
+  .home-search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+  }
+  .hs-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .hs-head-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .hs-title {
+    font-size: 16px;
+    font-weight: 800;
+  }
+  .hs-count {
+    font-size: 12px;
+  }
+  .hs-close-btn {
+    gap: 6px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .hs-loading,
+  .hs-empty {
+    padding: 16px 0;
+  }
+  .hs-artist-strip {
+    width: 100%;
+  }
+  .hs-artist-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+    transition: all 0.15s ease;
+  }
+  .hs-artist-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .hs-artist-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .hs-artist-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .hs-artist-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .hs-artist-tag {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+  }
+  .hs-artist-name {
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .hs-artist-subs {
+    font-size: 11px;
+  }
+  .hs-artist-go {
+    color: var(--text-muted);
+  }
+  .hs-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .hs-sec-title {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .hs-song-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .hs-song-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    transition: all 0.12s ease;
+  }
+  .hs-song-row:hover,
+  .hs-song-row.active {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+  }
+  .hs-song-hit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+  }
+  .hs-song-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .hs-song-title {
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+  .hs-song-artist {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .hs-song-dur {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    margin-right: 4px;
+  }
+  .hs-song-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .hs-pl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  .hs-pl-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+    transition: all 0.12s ease;
+  }
+  .hs-pl-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    background: var(--bg-hover);
+  }
+  .hs-pl-art {
+    width: 44px;
+    height: 44px;
+    border-radius: calc(var(--radius) * 0.4);
+    overflow: hidden;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .hs-pl-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .hs-pl-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+  .hs-pl-title {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .hs-pl-sub {
+    font-size: 11px;
+  }
+
   @media (max-width: 768px) {
     .view {
       gap: 16px;
@@ -1200,6 +1710,17 @@
     }
     .badge {
       align-self: center;
+    }
+    .hs-head {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .hs-close-btn {
+      align-self: flex-end;
+    }
+    .hs-pl-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>

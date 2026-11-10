@@ -170,7 +170,7 @@
             <span class="grip"></span>
           </div>
 
-          <LyricsPanel {threeCol} ontogglecolumns={() => (threeCol = !threeCol)} />
+          <LyricsPanel {threeCol} />
 
           <!-- Right splitter: between Lyrics and Queue -->
           <div
@@ -253,15 +253,17 @@
       <span class="m-nav-label">Kitaplık</span>
     </button>
 
-    <button
-      type="button"
-      class="m-nav-item"
-      class:active={view === 'search' && !player.openedArtist}
-      onclick={() => selectView('search')}
-    >
-      <Icon name="search" size={20} />
-      <span class="m-nav-label">Ara</span>
-    </button>
+    {#if theme.searchPlacement !== 'home'}
+      <button
+        type="button"
+        class="m-nav-item"
+        class:active={view === 'search' && !player.openedArtist}
+        onclick={() => selectView('search')}
+      >
+        <Icon name="search" size={20} />
+        <span class="m-nav-label">Ara</span>
+      </button>
+    {/if}
 
     <button
       type="button"

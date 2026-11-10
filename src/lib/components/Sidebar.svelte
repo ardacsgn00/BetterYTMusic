@@ -15,7 +15,13 @@
   };
 
   const items = $derived(
-    theme.sidebarNavOrder.map((id) => ALL_ITEMS[id]).filter(Boolean)
+    theme.sidebarNavOrder
+      .map((id) => ALL_ITEMS[id])
+      .filter((item) => {
+        if (!item) return false;
+        if (item.id === 'search' && theme.searchPlacement === 'home') return false;
+        return true;
+      })
   );
 
   const brandName = $derived(theme.appName.trim() || 'BetterYTMusic');
