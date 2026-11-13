@@ -180,6 +180,7 @@
 
 <section class="view" data-card-size={theme.cardSize} class:hide-subs={theme.hideSubtitles}>
   {#if openedPlaylist}
+    {@const plSaved = library.isPlaylistSaved(openedPlaylist.playlistId)}
     <!-- Dedicated Playlist Detail View -->
     <div class="pl-topbar">
       <button class="btn" onclick={() => (openedPlaylist = null)}>
@@ -223,6 +224,16 @@
           >
             <Icon name="shuffle" size={17} />
             Karışık Çal
+          </button>
+          <button
+            type="button"
+            class="btn"
+            class:accent={plSaved}
+            title={plSaved ? 'Kitaplıktan kaldır' : 'Listeyi kitaplığa kaydet'}
+            onclick={() => openedPlaylist && library.togglePlaylist(openedPlaylist)}
+          >
+            <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={17} />
+            <span>{plSaved ? 'Kaydedildi' : 'Kitaplığa Kaydet'}</span>
           </button>
         </div>
       </div>
@@ -531,23 +542,36 @@
                 <h3 class="hs-sec-title">Çalma Listeleri & Albümler</h3>
                 <div class="hs-pl-grid">
                   {#each homePlaylistResults.slice(0, 8) as pl (pl.playlistId)}
-                    <button
-                      type="button"
-                      class="hs-pl-card"
-                      onclick={() => openPlaylistView(pl)}
-                    >
-                      <div class="hs-pl-art" style:background-color={pl.color}>
-                        {#if pl.thumbnail}
-                          <img src={pl.thumbnail} alt="" draggable="false" />
-                        {:else}
-                          <Icon name="music" size={24} />
-                        {/if}
-                      </div>
-                      <div class="hs-pl-info">
-                        <span class="hs-pl-title truncate">{pl.title}</span>
-                        <span class="hs-pl-sub truncate muted">{pl.subtitle}</span>
-                      </div>
-                    </button>
+                    {@const plSaved = library.isPlaylistSaved(pl.playlistId)}
+                    <div class="hs-pl-card">
+                      <button
+                        type="button"
+                        class="hs-pl-hit"
+                        onclick={() => openPlaylistView(pl)}
+                      >
+                        <div class="hs-pl-art" style:background-color={pl.color}>
+                          {#if pl.thumbnail}
+                            <img src={pl.thumbnail} alt="" draggable="false" />
+                          {:else}
+                            <Icon name="music" size={24} />
+                          {/if}
+                        </div>
+                        <div class="hs-pl-info">
+                          <span class="hs-pl-title truncate">{pl.title}</span>
+                          <span class="hs-pl-sub truncate muted">{pl.subtitle}</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn ghost icon hs-pl-save"
+                        class:on={plSaved}
+                        title={plSaved ? 'Kitaplıktan kaldır' : 'Kitaplığa kaydet'}
+                        aria-label={plSaved ? 'Kitaplıktan kaldır' : 'Kitaplığa kaydet'}
+                        onclick={() => library.togglePlaylist(pl)}
+                      >
+                        <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={16} />
+                      </button>
+                    </div>
                   {/each}
                 </div>
               </div>
@@ -610,6 +634,7 @@
             {#each moodPlaylists as pl (pl.playlistId)}
               {@const isPlayingThis = player.state.sourceName === pl.title}
               {@const isBusy = playingPlaylistId === pl.playlistId}
+              {@const plSaved = library.isPlaylistSaved(pl.playlistId)}
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
@@ -637,7 +662,22 @@
                   </button>
                 </div>
                 <div class="mix-info">
-                  <span class="mix-tag">{selectedMood.title.toUpperCase()}</span>
+                  <div class="mix-head-row">
+                    <span class="mix-tag">{selectedMood.title.toUpperCase()}</span>
+                    <button
+                      type="button"
+                      class="mix-save-btn"
+                      class:on={plSaved}
+                      title={plSaved ? 'Kitaplıktan kaldır' : 'Kitaplığa kaydet'}
+                      aria-label={plSaved ? 'Kitaplıktan kaldır' : 'Kitaplığa kaydet'}
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        library.togglePlaylist(pl);
+                      }}
+                    >
+                      <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={15} />
+                    </button>
+                  </div>
                   <span class="mix-title truncate">{pl.title}</span>
                   <span class="mix-sub truncate muted">
                     {isBusy ? 'Başlatılıyor...' : pl.subtitle}
@@ -675,6 +715,7 @@
             {#each playlists as pl (pl.playlistId)}
               {@const isPlayingThis = player.state.sourceName === pl.title}
               {@const isBusy = playingPlaylistId === pl.playlistId}
+              {@const plSaved = library.isPlaylistSaved(pl.playlistId)}
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
@@ -702,9 +743,24 @@
                   </button>
                 </div>
                 <div class="mix-info">
-                  <span class="mix-tag">
-                    {pl.playlistId.startsWith('RD') ? 'MİKS' : 'LİSTE'}
-                  </span>
+                  <div class="mix-head-row">
+                    <span class="mix-tag">
+                      {pl.playlistId.startsWith('RD') ? 'MİKS' : 'LİSTE'}
+                    </span>
+                    <button
+                      type="button"
+                      class="mix-save-btn"
+                      class:on={plSaved}
+                      title={plSaved ? 'Kitaplıktan kaldır' : 'Kitaplığa kaydet'}
+                      aria-label={plSaved ? 'Kitaplıktan kaldır' : 'Kitaplığa kaydet'}
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        library.togglePlaylist(pl);
+                      }}
+                    >
+                      <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={15} />
+                    </button>
+                  </div>
                   <span class="mix-title truncate">{pl.title}</span>
                   <span class="mix-sub truncate muted">
                     {isBusy ? 'Başlatılıyor...' : pl.subtitle}
@@ -935,6 +991,34 @@
     display: flex;
     align-items: center;
   }
+  .pl-hero {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+  }
+  .hero-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  .hero-title {
+    font-size: clamp(20px, 2.4vw, 28px);
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .hero-meta {
+    font-size: 13px;
+  }
+  .hero-btns {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
   .pl-hero-art {
     width: 132px;
     height: 132px;
@@ -1131,6 +1215,12 @@
     gap: 3px;
     min-width: 0;
   }
+  .mix-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
   .mix-tag {
     align-self: flex-start;
     padding: 2px 7px;
@@ -1140,6 +1230,27 @@
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.05em;
+  }
+  .mix-save-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  .mix-save-btn:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+  .mix-save-btn.on {
+    color: var(--accent);
   }
   .mix-card.active .mix-tag {
     background: var(--accent);
@@ -1633,20 +1744,39 @@
   .hs-pl-card {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
+    gap: 6px;
+    padding: 6px 8px;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    text-align: left;
-    cursor: pointer;
     box-shadow: 0 var(--edge-depth) 0 var(--edge);
     transition: all 0.12s ease;
+    min-width: 0;
   }
   .hs-pl-card:hover {
     border-color: var(--accent);
     transform: translateY(-1px);
     background: var(--bg-hover);
+  }
+  .hs-pl-hit {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .hs-pl-save {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    flex-shrink: 0;
   }
   .hs-pl-art {
     width: 44px;
@@ -1705,11 +1835,19 @@
     .item {
       padding: 8px;
     }
+    .pl-hero {
+      grid-template-columns: 1fr;
+      text-align: center;
+      padding: 16px;
+    }
     .pl-hero-art {
       justify-self: center;
     }
     .badge {
       align-self: center;
+    }
+    .hero-btns {
+      justify-content: center;
     }
     .hs-head {
       flex-direction: column;

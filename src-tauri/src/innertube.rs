@@ -529,6 +529,49 @@ impl Innertube {
         Ok(out)
     }
 
+    fn collect_browse_playlists(
+        &self,
+        browse_id: &str,
+        out: &mut Vec<PlaylistCard>,
+    ) -> Result<(), String> {
+        let body = json!({
+            "context": web_remix_context(),
+            "browseId": browse_id
+        });
+
+        let val: Value = self
+            .authed_post("https://music.youtube.com/youtubei/v1/browse?prettyPrint=false")
+            .send_json(body)
+            .map_err(|e| format!("Liste isteği başarısız ({browse_id}): {e}"))?
+            .into_json()
+            .map_err(|e| format!("Liste yanıtı okunamadı ({browse_id}): {e}"))?;
+
+        self.save_visitor_data(&val);
+        collect_playlist_cards(&val, out);
+        Ok(())
+    }
+
+    fn retain_playable_playlists(out: &mut Vec<PlaylistCard>) {
+        // Remove non-playable "Yeni çalma listesi" / system buttons if any slipped in.
+        out.retain(|c| {
+            !c.playlist_id.is_empty()
+                && c.playlist_id != "LM"
+                && c.playlist_id != "SE"
+                && !c.title.to_lowercase().contains("yeni çalma listesi")
+        });
+    }
+
+    /// Fetch the signed-in user's YouTube Music library playlists (`FEmusic_liked_playlists`).
+    pub fn library_playlists(&self) -> Result<Vec<PlaylistCard>, String> {
+        if !self.auth_status().logged_in {
+            return Ok(Vec::new());
+        }
+        let mut out = Vec::new();
+        self.collect_browse_playlists("FEmusic_liked_playlists", &mut out)?;
+        Self::retain_playable_playlists(&mut out);
+        Ok(out)
+    }
+
     /// Fetch personalized Mixes (Supermix, Archive Mix, etc.) and Playlists from Home & Library.
     pub fn home_playlists(&self) -> Result<Vec<PlaylistCard>, String> {
         let mut out = vec![PlaylistCard {
@@ -540,30 +583,10 @@ impl Innertube {
         }];
 
         for browse_id in ["FEmusic_home", "FEmusic_liked_playlists"] {
-            let body = json!({
-                "context": web_remix_context(),
-                "browseId": browse_id
-            });
-
-            if let Ok(res) = self
-                .authed_post("https://music.youtube.com/youtubei/v1/browse?prettyPrint=false")
-                .send_json(body)
-            {
-                if let Ok(val) = res.into_json::<Value>() {
-                    self.save_visitor_data(&val);
-                    collect_playlist_cards(&val, &mut out);
-                }
-            }
+            let _ = self.collect_browse_playlists(browse_id, &mut out);
         }
 
-        // Remove non-playable "Yeni çalma listesi" / system buttons if any slipped in.
-        out.retain(|c| {
-            !c.playlist_id.is_empty()
-                && c.playlist_id != "LM"
-                && c.playlist_id != "SE"
-                && !c.title.to_lowercase().contains("yeni çalma listesi")
-        });
-
+        Self::retain_playable_playlists(&mut out);
         Ok(out)
     }
 

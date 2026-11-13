@@ -157,6 +157,7 @@
       </div>
       <div class="cards-grid">
         {#each artist.albums as album (album.playlistId)}
+          {@const plSaved = library.isPlaylistSaved(album.playlistId)}
           <div class="pl-card card">
             <button
               class="pl-card-btn"
@@ -177,6 +178,18 @@
                 <span class="pl-card-sub truncate muted" title={album.subtitle}>{album.subtitle}</span>
               </div>
             </button>
+            <div class="pl-card-footer">
+              <button
+                type="button"
+                class="btn sm pl-save-btn"
+                class:accent={plSaved}
+                title={plSaved ? 'Kitaplıktan Çıkar' : 'Kitaplığa Kaydet'}
+                onclick={() => library.togglePlaylist(album)}
+              >
+                <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={14} />
+                <span>{plSaved ? 'Kaydedildi' : 'Kaydet'}</span>
+              </button>
+            </div>
           </div>
         {/each}
       </div>
@@ -191,6 +204,7 @@
       </div>
       <div class="cards-grid">
         {#each artist.singles as single (single.playlistId)}
+          {@const plSaved = library.isPlaylistSaved(single.playlistId)}
           <div class="pl-card card">
             <button
               class="pl-card-btn"
@@ -211,6 +225,18 @@
                 <span class="pl-card-sub truncate muted" title={single.subtitle}>{single.subtitle}</span>
               </div>
             </button>
+            <div class="pl-card-footer">
+              <button
+                type="button"
+                class="btn sm pl-save-btn"
+                class:accent={plSaved}
+                title={plSaved ? 'Kitaplıktan Çıkar' : 'Kitaplığa Kaydet'}
+                onclick={() => library.togglePlaylist(single)}
+              >
+                <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={14} />
+                <span>{plSaved ? 'Kaydedildi' : 'Kaydet'}</span>
+              </button>
+            </div>
           </div>
         {/each}
       </div>
@@ -524,6 +550,20 @@
   }
   .pl-card-sub {
     font-size: 11.5px;
+  }
+  .pl-card-footer {
+    display: flex;
+    margin-top: auto;
+    padding-top: 4px;
+  }
+  .pl-save-btn {
+    width: 100%;
+    font-size: 11.5px;
+    font-weight: 700;
+    min-height: 30px;
+    padding: 4px 8px;
+    gap: 5px;
+    justify-content: center;
   }
 
   /* Similar Artists */

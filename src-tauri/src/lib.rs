@@ -129,6 +129,7 @@ pub fn run() {
             commands::yt_artist_search,
             commands::yt_home,
             commands::yt_home_playlists,
+            commands::yt_library_playlists,
             commands::yt_playlist_tracks,
             commands::yt_lyrics,
             commands::yt_liked,

@@ -242,6 +242,7 @@ class PlayerStore {
 
   home = () => invoke<Track[]>('yt_home');
   homePlaylists = () => invoke<PlaylistCard[]>('yt_home_playlists');
+  libraryPlaylists = () => invoke<PlaylistCard[]>('yt_library_playlists');
   playlistTracks = (playlistId: string) => invoke<Track[]>('yt_playlist_tracks', { playlistId });
   playPlaylist = async (playlistId: string, title?: string) => {
     const tracks = await this.playlistTracks(playlistId);

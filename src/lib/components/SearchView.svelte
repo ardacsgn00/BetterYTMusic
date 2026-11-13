@@ -180,6 +180,7 @@
 
   <!-- PLAYLIST INSPECTION VIEW (WHEN USER CLICKS ANY PLAYLIST OR ALBUM) -->
   {#if openedPlaylist}
+    {@const plSaved = library.isPlaylistSaved(openedPlaylist.playlistId)}
     <div class="opened-view card">
       <div class="opened-toolbar">
         <button class="btn back-btn" onclick={() => (openedPlaylist = null)}>
@@ -229,6 +230,16 @@
             >
               <Icon name="shuffle" size={16} />
               Karışık Çal
+            </button>
+            <button
+              type="button"
+              class="btn hero-play-btn"
+              class:accent={plSaved}
+              title={plSaved ? 'Kitaplıktan Kaldır' : 'Listeyi Kitaplığa Kaydet'}
+              onclick={() => openedPlaylist && library.togglePlaylist(openedPlaylist)}
+            >
+              <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={16} />
+              <span>{plSaved ? 'Kaydedildi' : 'Kitaplığa Kaydet'}</span>
             </button>
           </div>
         </div>
@@ -386,6 +397,7 @@
 
           <div class="cards-grid">
             {#each (activeTab === 'all' ? playlistResults.slice(0, 8) : playlistResults) as pl (pl.playlistId)}
+              {@const plSaved = library.isPlaylistSaved(pl.playlistId)}
               <div class="pl-card card">
                 <button class="pl-card-btn" onclick={() => openPlaylistView(pl)}>
                   <div class="pl-card-art" style:background-color={pl.color}>
@@ -412,6 +424,16 @@
                     onclick={() => openPlaylistView(pl)}
                   >
                     Listeyi Aç
+                  </button>
+                  <button
+                    type="button"
+                    class="btn sm icon-only pl-save-btn"
+                    class:accent={plSaved}
+                    title={plSaved ? 'Kitaplıktan Çıkar' : 'Kitaplığa Kaydet'}
+                    aria-label={plSaved ? 'Kitaplıktan Çıkar' : 'Kitaplığa Kaydet'}
+                    onclick={() => library.togglePlaylist(pl)}
+                  >
+                    <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={15} />
                   </button>
                 </div>
               </div>
@@ -505,6 +527,7 @@
       {:else if explorePlaylists.length > 0}
         <div class="cards-grid">
           {#each explorePlaylists as pl (pl.playlistId)}
+            {@const plSaved = library.isPlaylistSaved(pl.playlistId)}
             <div class="pl-card card">
               <button class="pl-card-btn" onclick={() => openPlaylistView(pl)}>
                 <div class="pl-card-art" style:background-color={pl.color}>
@@ -531,6 +554,16 @@
                   onclick={() => openPlaylistView(pl)}
                 >
                   Listeyi Aç
+                </button>
+                <button
+                  type="button"
+                  class="btn sm icon-only pl-save-btn"
+                  class:accent={plSaved}
+                  title={plSaved ? 'Kitaplıktan Çıkar' : 'Kitaplığa Kaydet'}
+                  aria-label={plSaved ? 'Kitaplıktan Çıkar' : 'Kitaplığa Kaydet'}
+                  onclick={() => library.togglePlaylist(pl)}
+                >
+                  <Icon name={plSaved ? 'bookmark-fill' : 'bookmark'} size={15} />
                 </button>
               </div>
             </div>
@@ -762,14 +795,24 @@
   }
   .pl-card-footer {
     display: flex;
+    align-items: center;
+    gap: 6px;
     margin-top: auto;
     padding-top: 4px;
   }
   .inspect-quick-btn {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     font-size: 11.5px;
     font-weight: 700;
     padding: 5px;
+    justify-content: center;
+  }
+  .pl-save-btn {
+    width: 32px;
+    min-width: 32px;
+    min-height: 30px;
+    padding: 0;
     justify-content: center;
   }
 
@@ -912,6 +955,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
     margin-top: 6px;
   }
   .hero-play-btn {

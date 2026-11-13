@@ -1,20 +1,41 @@
-import type { Track } from './types';
+import type { PlaylistCard, Track } from './types';
 
 const STORAGE_KEY = 'bytm.library.v1';
+const PLAYLISTS_STORAGE_KEY = 'bytm.library.playlists.v1';
+
+function readStoredList<T>(key: string, valid: (item: unknown) => item is T): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(valid) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredList<T>(key: string, items: T[]) {
+  try {
+    localStorage.setItem(key, JSON.stringify(items));
+  } catch {
+    /* ignore */
+  }
+}
 
 class LibraryStore {
   favorites = $state<Track[]>([]);
+  savedPlaylists = $state<PlaylistCard[]>([]);
 
   init() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) this.favorites = parsed;
-      }
-    } catch {
-      /* ignore corrupt storage */
-    }
+    this.favorites = readStoredList<Track>(
+      STORAGE_KEY,
+      (x): x is Track => Boolean(x && typeof x === 'object' && typeof (x as Track).id === 'string')
+    );
+    this.savedPlaylists = readStoredList<PlaylistCard>(
+      PLAYLISTS_STORAGE_KEY,
+      (x): x is PlaylistCard =>
+        Boolean(x && typeof x === 'object' && typeof (x as PlaylistCard).playlistId === 'string')
+    );
   }
 
   isFavorite(id: string | undefined): boolean {
@@ -30,15 +51,23 @@ class LibraryStore {
     } else {
       this.favorites.unshift(track);
     }
-    this.#save();
+    writeStoredList(STORAGE_KEY, this.favorites);
   }
 
-  #save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.favorites));
-    } catch {
-      /* ignore */
+  isPlaylistSaved(playlistId: string | undefined): boolean {
+    if (!playlistId) return false;
+    return this.savedPlaylists.some((p) => p.playlistId === playlistId);
+  }
+
+  togglePlaylist(playlist: PlaylistCard | null | undefined) {
+    if (!playlist?.playlistId) return;
+    const idx = this.savedPlaylists.findIndex((p) => p.playlistId === playlist.playlistId);
+    if (idx >= 0) {
+      this.savedPlaylists.splice(idx, 1);
+    } else {
+      this.savedPlaylists.unshift({ ...playlist });
     }
+    writeStoredList(PLAYLISTS_STORAGE_KEY, this.savedPlaylists);
   }
 }
 

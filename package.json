@@ -1,6 +1,6 @@
 {
     "name": "betterytmusic",
-    "version": "0.32.0",
+    "version": "0.33.0",
     "description": "Lightweight YouTube Music desktop client (Tauri 2 + Rust + SvelteKit)",
     "author": "Arda Coşgun <https://github.com/ardacsgn00>",
     "license": "MIT",

@@ -235,6 +235,14 @@ pub async fn yt_home_playlists(yt: Yt<'_>) -> Result<Vec<PlaylistCard>, String> 
 }
 
 #[tauri::command]
+pub async fn yt_library_playlists(yt: Yt<'_>) -> Result<Vec<PlaylistCard>, String> {
+    let yt = yt.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || yt.library_playlists())
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn yt_playlist_tracks(yt: Yt<'_>, playlist_id: String) -> Result<Vec<Track>, String> {
     let yt = yt.inner().clone();
     tauri::async_runtime::spawn_blocking(move || yt.playlist_tracks(&playlist_id))
