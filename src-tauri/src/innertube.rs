@@ -47,6 +47,7 @@ pub struct ResolvedStream {
     pub user_agent: &'static str,
     pub duration_ms: Option<u64>,
     pub content_length: Option<u64>,
+    pub loudness_db: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -1063,11 +1064,21 @@ impl Innertube {
                     .map(|s| s * 1000)
             });
 
+        let loudness_db = val
+            .pointer("/playerConfig/audioConfig/loudnessDb")
+            .and_then(Value::as_f64)
+            .or_else(|| {
+                val.pointer("/playerConfig/audioConfig/perceptualLoudnessDb")
+                    .and_then(Value::as_f64)
+            })
+            .map(|v| v as f32);
+
         Some(ResolvedStream {
             url,
             user_agent: ua,
             duration_ms,
             content_length,
+            loudness_db,
         })
     }
 }

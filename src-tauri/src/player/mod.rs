@@ -1,8 +1,10 @@
 pub mod engine;
+pub mod session;
 
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
@@ -12,6 +14,7 @@ use crate::media::{MediaSender, MediaUpdate};
 use crate::mock::Track;
 use crate::taskbar::TaskbarHandle;
 use engine::{AudioEngine, RodioEngine};
+use session::{load_session, save_session, SavedSession};
 
 /// Event emitted to the frontend whenever player state changes.
 pub const STATE_EVENT: &str = "player:state";
@@ -79,12 +82,33 @@ impl Player {
         self.index.and_then(|i| self.queue.get(i))
     }
 
+    fn next_prefetch_track(&self) -> Option<Track> {
+        let idx = self.index?;
+        if self.queue.is_empty() || self.repeat == RepeatMode::One {
+            return None;
+        }
+        if idx + 1 < self.queue.len() {
+            self.queue.get(idx + 1).cloned()
+        } else if self.repeat == RepeatMode::All && self.queue.len() > 1 {
+            self.queue.first().cloned()
+        } else {
+            None
+        }
+    }
+
+    fn trigger_prefetch(&mut self) {
+        if let Some(next) = self.next_prefetch_track() {
+            self.engine.prefetch(&next);
+        }
+    }
+
     fn load(&mut self, index: usize, autoplay: bool) {
         let Some(track) = self.queue.get(index) else { return };
         self.engine.load(track);
         self.index = Some(index);
         if autoplay {
             self.engine.play();
+            self.trigger_prefetch();
         }
     }
 
@@ -96,6 +120,7 @@ impl Player {
             self.engine.seek(0);
         }
         self.engine.play();
+        self.trigger_prefetch();
     }
 
     pub fn pause(&mut self) {
@@ -166,10 +191,15 @@ impl Player {
     }
 
     pub fn append_unique(&mut self, tracks: Vec<Track>) {
+        let mut added = false;
         for t in tracks {
             if !self.queue.iter().any(|x| x.id == t.id) {
                 self.queue.push(t);
+                added = true;
             }
+        }
+        if added && self.engine.is_playing() {
+            self.trigger_prefetch();
         }
     }
 
@@ -180,6 +210,10 @@ impl Player {
     pub fn set_volume(&mut self, volume: f32) {
         self.volume = volume.clamp(0.0, 1.0);
         self.engine.set_volume(self.volume);
+    }
+
+    pub fn set_normalization(&mut self, enabled: bool) {
+        self.engine.set_normalization(enabled);
     }
 
     pub fn set_output_device(&mut self, device: Option<String>) {
@@ -196,6 +230,9 @@ impl Player {
             RepeatMode::All => RepeatMode::One,
             RepeatMode::One => RepeatMode::Off,
         };
+        if self.engine.is_playing() {
+            self.trigger_prefetch();
+        }
     }
 
     pub fn toggle_shuffle(&mut self) {
@@ -220,6 +257,29 @@ impl Player {
                 let j = start + (seed as usize % (i - start + 1));
                 self.queue.swap(i, j);
             }
+        }
+        if self.engine.is_playing() {
+            self.trigger_prefetch();
+        }
+    }
+
+    pub fn restore_session(&mut self, session: SavedSession) {
+        if session.queue.is_empty() {
+            return;
+        }
+        self.queue = session.queue;
+        self.volume = session.volume.clamp(0.0, 1.0);
+        self.engine.set_volume(self.volume);
+        self.repeat = session.repeat;
+        self.shuffle = session.shuffle;
+        self.source_name = session.source_name;
+        if let Some(dev) = session.output_device {
+            self.set_output_device(Some(dev));
+        }
+        let idx = session.index.unwrap_or(0).min(self.queue.len() - 1);
+        self.load(idx, false);
+        if session.position_ms > 0 {
+            self.engine.seek(session.position_ms);
         }
     }
 
@@ -268,6 +328,8 @@ pub struct PlayerController {
     taskbar: Mutex<Option<TaskbarHandle>>,
     last_track_id: Mutex<Option<String>>,
     last_autoplay_id: Mutex<Option<String>>,
+    session_path: Mutex<Option<PathBuf>>,
+    last_session_save: Mutex<Instant>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -284,7 +346,58 @@ impl PlayerController {
             taskbar: Mutex::new(None),
             last_track_id: Mutex::new(None),
             last_autoplay_id: Mutex::new(None),
+            session_path: Mutex::new(None),
+            last_session_save: Mutex::new(Instant::now()),
         }
+    }
+
+    pub fn init_session(&self, path: PathBuf, resume_enabled: bool) -> bool {
+        *lock(&self.session_path) = Some(path.clone());
+        if !resume_enabled {
+            return false;
+        }
+        let Some(saved) = load_session(&path) else {
+            return false;
+        };
+        lock(&self.player).restore_session(saved);
+        true
+    }
+
+    pub fn save_session_now(&self) {
+        let Some(path) = lock(&self.session_path).clone() else {
+            return;
+        };
+        let snap = self.snapshot();
+        let session = SavedSession {
+            queue: snap.queue,
+            index: snap.index,
+            position_ms: snap.position_ms,
+            volume: snap.volume,
+            repeat: snap.repeat,
+            shuffle: snap.shuffle,
+            source_name: snap.source_name,
+            output_device: snap.output_device,
+        };
+        save_session(&path, &session);
+        *lock(&self.last_session_save) = Instant::now();
+    }
+
+    fn save_session_from_snap(&self, snap: &PlayerSnapshot) {
+        let Some(path) = lock(&self.session_path).clone() else {
+            return;
+        };
+        let session = SavedSession {
+            queue: snap.queue.clone(),
+            index: snap.index,
+            position_ms: snap.position_ms,
+            volume: snap.volume,
+            repeat: snap.repeat,
+            shuffle: snap.shuffle,
+            source_name: snap.source_name.clone(),
+            output_device: snap.output_device.clone(),
+        };
+        save_session(&path, &session);
+        *lock(&self.last_session_save) = Instant::now();
     }
 
     pub fn attach_media(&self, tx: Option<MediaSender>) {
@@ -357,13 +470,16 @@ impl PlayerController {
                 position_ms: snap.position_ms,
             });
         }
+
+        self.save_session_from_snap(snap);
     }
 
     /// Detects natural end-of-track and advances the queue, and updates duration if newly decoded.
     fn tick(&self, app: &AppHandle) {
-        let (ended, dur_changed, needs_autoplay_id) = {
+        let (ended, dur_changed, is_playing, needs_autoplay_id) = {
             let mut p = lock(&self.player);
-            let ended = p.engine.is_playing() && p.engine.is_finished();
+            let is_playing = p.engine.is_playing();
+            let ended = is_playing && p.engine.is_finished();
             let eng_dur = p.engine.duration_ms();
             let mut dur_changed = false;
             let mut needs_autoplay_id = None;
@@ -375,11 +491,11 @@ impl PlayerController {
                     }
                 }
                 // Proactively trigger autoplay when on the last track of queue
-                if p.repeat == RepeatMode::Off && idx + 1 >= p.queue.len() && (ended || p.engine.is_playing()) {
+                if p.repeat == RepeatMode::Off && idx + 1 >= p.queue.len() && (ended || is_playing) {
                     needs_autoplay_id = Some(p.queue[idx].id.clone());
                 }
             }
-            (ended, dur_changed, needs_autoplay_id)
+            (ended, dur_changed, is_playing, needs_autoplay_id)
         };
 
         if let Some(vid) = needs_autoplay_id {
@@ -410,6 +526,12 @@ impl PlayerController {
             self.with(app, |p| p.on_track_end());
         } else if dur_changed {
             self.broadcast(app);
+        } else if is_playing {
+            // Periodically checkpoint playback position every 5s in case of unexpected exit.
+            let elapsed = lock(&self.last_session_save).elapsed();
+            if elapsed >= Duration::from_secs(5) {
+                self.save_session_now();
+            }
         }
     }
 }

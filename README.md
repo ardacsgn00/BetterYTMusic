@@ -7,7 +7,7 @@
 **Hafif, hızlı ve kişiselleştirilebilir masaüstü YouTube Music istemcisi**  
 *Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows & macOS*
 
-[![Version](https://img.shields.io/badge/version-v0.26.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Version](https://img.shields.io/badge/version-v0.27.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Built with Tauri](https://img.shields.io/badge/Tauri_2-Rust_%2B_Svelte_5-06d6a0?style=for-the-badge)](https://tauri.app)
 [![Developer](https://img.shields.io/badge/Geli%C5%9Ftirici-Arda_Co%C5%9Fgun-8338ec?style=for-the-badge)](https://github.com/ardacsgn00)
@@ -19,6 +19,10 @@
 ## ✨ Öne Çıkan Özellikler
 
 - **🦀 Doğrudan Rust Ses Motoru (`rodio` + `symphonia`):** Tarayıcı sekmesi veya ağır Electron katmanı olmadan, düşük RAM ve CPU kullanımıyla yerel AAC/M4A ses çözme ve paket düzeyinde milisaniyelik ileri-geri sarma (seek).
+  - **Sıradaki Parça Ön Yüklemesi (Zero-Latency Prefetch):** Çalma sırasında sıradaki şarkıyı arka planda bellek içi MRU önbelleğine alarak şarkı geçişlerini anlık hale getirir.
+  - **Ses Seviyesi Dengeleme (Loudness Normalization):** YouTube Music ses yüksekliği (`loudnessDb`) verisini kullanarak parçalar arasındaki ani ses farklarını dengeler (Ayarlardan açılıp kapatılabilir).
+  - **Kaldığın Yerden Devam Et (Session Resume):** Kuyruğu, aktif parçayı, milisaniyelik konumu ve çalma ayarlarını yerel olarak saklar; sonraki açılışta aynı noktadan devam etmeni sağlar.
+- **🖥️ Tam Ekran Dinleme Modu:** `F` veya `F11` kısayolu ya da oynatıcı çubuğundaki tam ekran butonuyla açılan, büyük kapak görseli, senkronize şarkı sözleri / sıradaki görünümü ve dokunsal kontroller sunan odaklanmış tam ekran deneyimi.
 - **🎵 YouTube Music & Google Hesabı Entegrasyonu:**
   - Google hesabınla güvenli giriş yapıp kişisel **Süpermix'im**, **Arşivden Şarkılar**, kişisel çalma listelerin ve **Beğenilen Şarkılar** kitaplığına anında erişim.
   - **Şarkı & Sanatçı Radyosu:** Herhangi bir şarkı veya sanatçıdan tek tıkla benzer müzik akışı başlatma.

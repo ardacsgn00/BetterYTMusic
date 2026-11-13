@@ -72,10 +72,12 @@ fn open_output_stream(
 /// Abstraction over the audio backend.
 pub trait AudioEngine: Send {
     fn load(&mut self, track: &Track);
+    fn prefetch(&mut self, track: &Track);
     fn play(&mut self);
     fn pause(&mut self);
     fn seek(&mut self, position_ms: u64);
     fn set_volume(&mut self, volume: f32);
+    fn set_normalization(&mut self, enabled: bool);
     fn set_output_device(&mut self, device_name: Option<String>);
     fn is_playing(&self) -> bool;
     fn position_ms(&self) -> u64;
@@ -85,10 +87,12 @@ pub trait AudioEngine: Send {
 
 enum EngineCmd {
     Load(Track),
+    Prefetch(Track),
     Play,
     Pause,
     Seek(u64),
     SetVolume(f32),
+    SetNormalization(bool),
     SetOutputDevice(Option<String>),
 }
 
@@ -430,6 +434,10 @@ impl AudioEngine for RodioEngine {
         let _ = self.tx.send(EngineCmd::Load(track.clone()));
     }
 
+    fn prefetch(&mut self, track: &Track) {
+        let _ = self.tx.send(EngineCmd::Prefetch(track.clone()));
+    }
+
     fn play(&mut self) {
         self.clock.mark_playing();
         let _ = self.tx.send(EngineCmd::Play);
@@ -447,6 +455,10 @@ impl AudioEngine for RodioEngine {
 
     fn set_volume(&mut self, volume: f32) {
         let _ = self.tx.send(EngineCmd::SetVolume(volume));
+    }
+
+    fn set_normalization(&mut self, enabled: bool) {
+        let _ = self.tx.send(EngineCmd::SetNormalization(enabled));
     }
 
     fn set_output_device(&mut self, device_name: Option<String>) {
@@ -471,10 +483,88 @@ impl AudioEngine for RodioEngine {
     }
 }
 
-struct DecodedBuffer {
-    seq: u64,
+const MAX_TRACK_CACHE: usize = 4;
+const MAX_PREFETCH_BYTES: u64 = 25 * 1024 * 1024;
+
+#[derive(Clone)]
+struct CachedAudio {
     bytes: Arc<[u8]>,
     duration_ms: Option<u64>,
+    loudness_db: Option<f32>,
+}
+
+struct DecodedBuffer {
+    seq: u64,
+    video_id: String,
+    audio: CachedAudio,
+}
+
+fn compute_norm_gain(loudness_db: Option<f32>) -> f32 {
+    let Some(db) = loudness_db else {
+        return 1.0;
+    };
+    if !db.is_finite() {
+        return 1.0;
+    }
+    // YouTube's `loudnessDb` measures how many dB above target (-14 LUFS) the track is.
+    10f32.powf(-db / 20.0).clamp(0.2, 1.68)
+}
+
+#[inline]
+fn effective_volume(user_volume: f32, loudness_db: Option<f32>, norm_enabled: bool) -> f32 {
+    let base = user_volume.clamp(0.0, 1.0);
+    if norm_enabled {
+        (base * compute_norm_gain(loudness_db)).clamp(0.0, 1.8)
+    } else {
+        base
+    }
+}
+
+fn cache_insert(cache: &mut Vec<(String, CachedAudio)>, id: String, audio: CachedAudio) {
+    if let Some(pos) = cache.iter().position(|(k, _)| k == &id) {
+        cache.remove(pos);
+    }
+    cache.push((id, audio));
+    if cache.len() > MAX_TRACK_CACHE {
+        cache.remove(0);
+    }
+}
+
+fn cache_get(cache: &[(String, CachedAudio)], id: &str) -> Option<CachedAudio> {
+    cache.iter().find(|(k, _)| k == id).map(|(_, a)| a.clone())
+}
+
+fn build_sink_at(
+    handle: &rodio::OutputStreamHandle,
+    bytes: Arc<[u8]>,
+    seek_ms: u64,
+    eff_vol: f32,
+    desired_playing: bool,
+    clock: &SharedClock,
+) -> Result<Sink, String> {
+    let new_sink = Sink::try_new(handle).map_err(|e| format!("sink init error: {e}"))?;
+    new_sink.set_volume(eff_vol);
+    let decoder = SymphoniaSource::new_at(bytes, Duration::from_millis(seek_ms))?;
+    if let Some(total) = decoder.total_duration() {
+        let ms = total.as_millis() as u64;
+        if ms > 0 {
+            clock.duration_ms.store(ms, Ordering::Relaxed);
+        }
+    }
+    new_sink.append(decoder);
+    clock.base_ms.store(seek_ms, Ordering::Relaxed);
+    clock.has_audio.store(true, Ordering::Relaxed);
+    clock.finished.store(false, Ordering::Relaxed);
+    if desired_playing {
+        let now = clock.now_ms().max(1);
+        clock.started_epoch_ms.store(now, Ordering::Relaxed);
+        clock.playing.store(true, Ordering::Relaxed);
+        new_sink.play();
+    } else {
+        clock.started_epoch_ms.store(0, Ordering::Relaxed);
+        new_sink.pause();
+    }
+    Ok(new_sink)
 }
 
 fn run_worker(
@@ -487,62 +577,124 @@ fn run_worker(
     let mut sink: Option<Sink> = None;
 
     let (buf_tx, buf_rx) = mpsc::channel::<DecodedBuffer>();
+    let (pref_tx, pref_rx) = mpsc::channel::<(String, Option<CachedAudio>)>();
+
+    let mut track_cache: Vec<(String, CachedAudio)> = Vec::with_capacity(MAX_TRACK_CACHE);
+    let mut active_track_id: Option<String> = None;
+    let mut pending_prefetch: Option<Track> = None;
+    let mut prefetching_id: Option<String> = None;
+    let prefetch_gen = Arc::new(AtomicU64::new(0));
 
     let mut current_bytes: Option<Arc<[u8]>> = None;
-    let mut volume: f32 = 0.8;
+    let mut current_loudness_db: Option<f32> = None;
+    let mut user_volume: f32 = 0.8;
+    let mut norm_enabled: bool = true;
     let mut desired_playing = false;
     let mut is_mock = true;
     let mut active_seq: u64 = 0;
 
+    let maybe_start_prefetch = |pending: &mut Option<Track>,
+                                prefetching: &mut Option<String>,
+                                cache: &[(String, CachedAudio)],
+                                cur_bytes: &Option<Arc<[u8]>>,
+                                active_id: &Option<String>,
+                                yt: &Arc<Innertube>,
+                                tx_pref: &Sender<(String, Option<CachedAudio>)>,
+                                p_gen: &Arc<AtomicU64>| {
+        if cur_bytes.is_none() || prefetching.is_some() {
+            return;
+        }
+        let Some(track) = pending.take() else {
+            return;
+        };
+        if track.id.starts_with("mock-")
+            || active_id.as_deref() == Some(track.id.as_str())
+            || cache_get(cache, &track.id).is_some()
+        {
+            return;
+        }
+        let vid = track.id.clone();
+        *prefetching = Some(vid.clone());
+        let gen = p_gen.fetch_add(1, Ordering::SeqCst) + 1;
+        let gen_ref = p_gen.clone();
+        let yt_bg = yt.clone();
+        let tx = tx_pref.clone();
+        thread::spawn(move || {
+            let res = fetch_stream_bytes(&yt_bg, &vid, Some(MAX_PREFETCH_BYTES), || {
+                gen_ref.load(Ordering::SeqCst) != gen
+            });
+            let _ = tx.send((vid, res));
+        });
+    };
+
     loop {
-        // Check if a background stream download completed.
+        // Check if a background stream download completed for the active track.
         while let Ok(ready) = buf_rx.try_recv() {
+            cache_insert(&mut track_cache, ready.video_id.clone(), ready.audio.clone());
             if ready.seq != active_seq {
                 continue;
             }
-            if let Some(dur) = ready.duration_ms {
+            if let Some(dur) = ready.audio.duration_ms {
                 if dur > 0 {
                     clock.duration_ms.store(dur, Ordering::Relaxed);
                 }
             }
-            current_bytes = Some(ready.bytes.clone());
+            current_bytes = Some(ready.audio.bytes.clone());
+            current_loudness_db = ready.audio.loudness_db;
 
             if stream_pair.is_none() {
                 stream_pair = open_output_stream(None);
             }
 
             if let Some((_, handle)) = &stream_pair {
-                if let Ok(new_sink) = Sink::try_new(handle) {
-                    new_sink.set_volume(volume);
-                    let seek_pos = clock.base_ms.load(Ordering::Relaxed);
-                    match SymphoniaSource::new_at(ready.bytes, Duration::from_millis(seek_pos)) {
-                        Ok(decoder) => {
-                            if let Some(total) = decoder.total_duration() {
-                                let ms = total.as_millis() as u64;
-                                if ms > 0 {
-                                    clock.duration_ms.store(ms, Ordering::Relaxed);
-                                }
-                            }
-                            new_sink.append(decoder);
-                            clock.has_audio.store(true, Ordering::Relaxed);
-                            clock.finished.store(false, Ordering::Relaxed);
-                            if desired_playing {
-                                let now = clock.now_ms().max(1);
-                                clock.started_epoch_ms.store(now, Ordering::Relaxed);
-                                clock.playing.store(true, Ordering::Relaxed);
-                                new_sink.play();
-                            } else {
-                                clock.started_epoch_ms.store(0, Ordering::Relaxed);
-                                new_sink.pause();
-                            }
-                            sink = Some(new_sink);
-                        }
-                        Err(e) => {
-                            eprintln!("[audio] decode error: {e}");
-                        }
-                    }
+                if let Some(old_sink) = sink.take() {
+                    old_sink.stop();
+                }
+                let seek_pos = clock.base_ms.load(Ordering::Relaxed);
+                let eff_vol = effective_volume(user_volume, current_loudness_db, norm_enabled);
+                match build_sink_at(
+                    handle,
+                    ready.audio.bytes,
+                    seek_pos,
+                    eff_vol,
+                    desired_playing,
+                    &clock,
+                ) {
+                    Ok(new_sink) => sink = Some(new_sink),
+                    Err(e) => eprintln!("[audio] decode error: {e}"),
                 }
             }
+
+            maybe_start_prefetch(
+                &mut pending_prefetch,
+                &mut prefetching_id,
+                &track_cache,
+                &current_bytes,
+                &active_track_id,
+                &innertube,
+                &pref_tx,
+                &prefetch_gen,
+            );
+        }
+
+        // Collect background prefetch completions.
+        while let Ok((vid, maybe_audio)) = pref_rx.try_recv() {
+            if prefetching_id.as_deref() == Some(vid.as_str()) {
+                prefetching_id = None;
+            }
+            if let Some(audio) = maybe_audio {
+                cache_insert(&mut track_cache, vid, audio);
+            }
+            maybe_start_prefetch(
+                &mut pending_prefetch,
+                &mut prefetching_id,
+                &track_cache,
+                &current_bytes,
+                &active_track_id,
+                &innertube,
+                &pref_tx,
+                &prefetch_gen,
+            );
         }
 
         // Detect natural end-of-sink for real audio tracks.
@@ -558,23 +710,83 @@ fn run_worker(
             Ok(cmd) => match cmd {
                 EngineCmd::Load(track) => {
                     active_seq = load_seq.load(Ordering::SeqCst);
-                    current_bytes = None;
+                    active_track_id = Some(track.id.clone());
                     desired_playing = false;
-                    if let Some(s) = &sink {
-                        s.stop();
+                    if let Some(old_sink) = sink.take() {
+                        old_sink.stop();
                     }
                     is_mock = track.id.starts_with("mock-");
-                    if !is_mock {
+                    if is_mock {
+                        current_bytes = None;
+                        current_loudness_db = None;
+                    } else if let Some(cached) = cache_get(&track_cache, &track.id) {
+                        // Instant playback from prefetched / cached bytes (0 ms wait).
+                        if let Some(dur) = cached.duration_ms {
+                            if dur > 0 {
+                                clock.duration_ms.store(dur, Ordering::Relaxed);
+                            }
+                        }
+                        current_bytes = Some(cached.bytes.clone());
+                        current_loudness_db = cached.loudness_db;
+                        if stream_pair.is_none() {
+                            stream_pair = open_output_stream(None);
+                        }
+                        if let Some((_, handle)) = &stream_pair {
+                            let seek_pos = clock.base_ms.load(Ordering::Relaxed);
+                            let eff_vol =
+                                effective_volume(user_volume, current_loudness_db, norm_enabled);
+                            match build_sink_at(
+                                handle,
+                                cached.bytes,
+                                seek_pos,
+                                eff_vol,
+                                desired_playing,
+                                &clock,
+                            ) {
+                                Ok(new_sink) => sink = Some(new_sink),
+                                Err(e) => eprintln!("[audio] cache decode error: {e}"),
+                            }
+                        }
+                    } else {
+                        current_bytes = None;
+                        current_loudness_db = None;
                         let tx_done = buf_tx.clone();
                         let yt = innertube.clone();
                         let seq = active_seq;
                         let vid = track.id.clone();
                         let seq_ref = load_seq.clone();
                         thread::spawn(move || {
-                            if let Some(buf) = fetch_audio_bytes(&yt, &vid, seq, &seq_ref) {
-                                let _ = tx_done.send(buf);
+                            if let Some(audio) =
+                                fetch_stream_bytes(&yt, &vid, None, || {
+                                    seq_ref.load(Ordering::SeqCst) != seq
+                                })
+                            {
+                                let _ = tx_done.send(DecodedBuffer {
+                                    seq,
+                                    video_id: vid,
+                                    audio,
+                                });
                             }
                         });
+                    }
+                }
+                EngineCmd::Prefetch(track) => {
+                    if !track.id.starts_with("mock-")
+                        && active_track_id.as_deref() != Some(track.id.as_str())
+                        && cache_get(&track_cache, &track.id).is_none()
+                        && prefetching_id.as_deref() != Some(track.id.as_str())
+                    {
+                        pending_prefetch = Some(track);
+                        maybe_start_prefetch(
+                            &mut pending_prefetch,
+                            &mut prefetching_id,
+                            &track_cache,
+                            &current_bytes,
+                            &active_track_id,
+                            &innertube,
+                            &pref_tx,
+                            &prefetch_gen,
+                        );
                     }
                 }
                 EngineCmd::Play => {
@@ -600,34 +812,42 @@ fn run_worker(
                     } else {
                         pos_ms
                     };
-                    let target = Duration::from_millis(clamped_ms);
                     if let (Some(bytes), Some((_, handle))) = (&current_bytes, &stream_pair) {
                         if let Some(old_sink) = sink.take() {
                             old_sink.stop();
                         }
-                        if let Ok(new_sink) = Sink::try_new(handle) {
-                            new_sink.set_volume(volume);
-                            if let Ok(dec) = SymphoniaSource::new_at(bytes.clone(), target) {
-                                new_sink.append(dec);
-                                clock.base_ms.store(clamped_ms, Ordering::Relaxed);
-                                clock.finished.store(false, Ordering::Relaxed);
-                                if desired_playing {
-                                    let now = clock.now_ms().max(1);
-                                    clock.started_epoch_ms.store(now, Ordering::Relaxed);
-                                    new_sink.play();
-                                } else {
-                                    clock.started_epoch_ms.store(0, Ordering::Relaxed);
-                                    new_sink.pause();
-                                }
-                                sink = Some(new_sink);
-                            }
+                        let eff_vol =
+                            effective_volume(user_volume, current_loudness_db, norm_enabled);
+                        if let Ok(new_sink) = build_sink_at(
+                            handle,
+                            bytes.clone(),
+                            clamped_ms,
+                            eff_vol,
+                            desired_playing,
+                            &clock,
+                        ) {
+                            sink = Some(new_sink);
                         }
                     }
                 }
                 EngineCmd::SetVolume(v) => {
-                    volume = v;
+                    user_volume = v;
                     if let Some(s) = &sink {
-                        s.set_volume(volume);
+                        s.set_volume(effective_volume(
+                            user_volume,
+                            current_loudness_db,
+                            norm_enabled,
+                        ));
+                    }
+                }
+                EngineCmd::SetNormalization(enabled) => {
+                    norm_enabled = enabled;
+                    if let Some(s) = &sink {
+                        s.set_volume(effective_volume(
+                            user_volume,
+                            current_loudness_db,
+                            norm_enabled,
+                        ));
                     }
                 }
                 EngineCmd::SetOutputDevice(dev_name) => {
@@ -644,27 +864,33 @@ fn run_worker(
                     drop(stream_pair.take());
                     stream_pair = open_output_stream(dev_name.as_deref());
                     if let Some((_, handle)) = &stream_pair {
-                        if let Ok(new_sink) = Sink::try_new(handle) {
-                            new_sink.set_volume(volume);
-                            if let Some(bytes) = &current_bytes {
-                                if clock.has_audio.load(Ordering::Relaxed) {
-                                    let target = Duration::from_millis(clamped_ms);
-                                    if let Ok(dec) = SymphoniaSource::new_at(bytes.clone(), target) {
-                                        new_sink.append(dec);
-                                        clock.base_ms.store(clamped_ms, Ordering::Relaxed);
-                                        clock.finished.store(false, Ordering::Relaxed);
-                                        if desired_playing {
-                                            let now = clock.now_ms().max(1);
-                                            clock.started_epoch_ms.store(now, Ordering::Relaxed);
-                                            new_sink.play();
-                                        } else {
-                                            clock.started_epoch_ms.store(0, Ordering::Relaxed);
-                                            new_sink.pause();
-                                        }
-                                    }
+                        if let Some(bytes) = &current_bytes {
+                            if clock.has_audio.load(Ordering::Relaxed) {
+                                let eff_vol = effective_volume(
+                                    user_volume,
+                                    current_loudness_db,
+                                    norm_enabled,
+                                );
+                                if let Ok(new_sink) = build_sink_at(
+                                    handle,
+                                    bytes.clone(),
+                                    clamped_ms,
+                                    eff_vol,
+                                    desired_playing,
+                                    &clock,
+                                ) {
+                                    sink = Some(new_sink);
                                 }
+                                continue;
                             }
-                            sink = Some(new_sink);
+                        }
+                        if let Ok(empty_sink) = Sink::try_new(handle) {
+                            empty_sink.set_volume(effective_volume(
+                                user_volume,
+                                current_loudness_db,
+                                norm_enabled,
+                            ));
+                            sink = Some(empty_sink);
                         }
                     }
                 }
@@ -675,12 +901,12 @@ fn run_worker(
     }
 }
 
-fn fetch_audio_bytes(
+fn fetch_stream_bytes(
     innertube: &Innertube,
     video_id: &str,
-    seq: u64,
-    latest_seq: &AtomicU64,
-) -> Option<DecodedBuffer> {
+    max_bytes: Option<u64>,
+    should_abort: impl Fn() -> bool,
+) -> Option<CachedAudio> {
     let resolved = match innertube.resolve_stream(video_id) {
         Ok(r) => r,
         Err(e) => {
@@ -689,8 +915,14 @@ fn fetch_audio_bytes(
         }
     };
 
-    if latest_seq.load(Ordering::SeqCst) != seq {
+    if should_abort() {
         return None;
+    }
+
+    if let (Some(limit), Some(clen)) = (max_bytes, resolved.content_length) {
+        if clen > limit {
+            return None;
+        }
     }
 
     let mut req = innertube
@@ -714,20 +946,25 @@ fn fetch_audio_bytes(
     let mut chunk = [0u8; 64 * 1024];
 
     loop {
-        if latest_seq.load(Ordering::SeqCst) != seq {
+        if should_abort() {
             return None;
         }
         let n = reader.read(&mut chunk).ok()?;
         if n == 0 {
             break;
         }
+        if let Some(limit) = max_bytes {
+            if (data.len() + n) as u64 > limit {
+                return None;
+            }
+        }
         data.extend_from_slice(&chunk[..n]);
     }
 
-    Some(DecodedBuffer {
-        seq,
+    Some(CachedAudio {
         bytes: Arc::from(data),
         duration_ms: resolved.duration_ms,
+        loudness_db: resolved.loudness_db,
     })
 }
 

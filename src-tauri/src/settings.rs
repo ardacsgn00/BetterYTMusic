@@ -42,6 +42,10 @@ pub struct AppSettings {
     pub discord_show_time: bool,
     #[serde(default = "default_false")]
     pub discord_clear_on_pause: bool,
+    #[serde(default = "default_true")]
+    pub loudness_normalization: bool,
+    #[serde(default = "default_true")]
+    pub resume_session: bool,
 }
 
 impl Default for AppSettings {
@@ -57,6 +61,8 @@ impl Default for AppSettings {
             discord_show_cover: true,
             discord_show_time: true,
             discord_clear_on_pause: false,
+            loudness_normalization: true,
+            resume_session: true,
         }
     }
 }

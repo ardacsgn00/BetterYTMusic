@@ -29,15 +29,23 @@ pub fn run() {
 
             let yt = Arc::new(Innertube::new());
             let settings = Arc::new(SettingsManager::new());
-            if let Some(dir) = data_dir {
+            if let Some(dir) = &data_dir {
                 yt.init_storage(dir.clone());
-                settings.init(dir);
+                settings.init(dir.clone());
             }
             app.manage(yt.clone());
             app.manage(settings.clone());
             app.manage(miniwin::MiniState::default());
 
-            app.manage(PlayerController::new(yt.clone(), Vec::new()));
+            let ctrl = PlayerController::new(yt.clone(), Vec::new());
+            let cur_settings = settings.get();
+            ctrl.with(&handle, |p| p.set_normalization(cur_settings.loudness_normalization));
+            let session_restored = if let Some(dir) = &data_dir {
+                ctrl.init_session(dir.join("session.json"), cur_settings.resume_session)
+            } else {
+                false
+            };
+            app.manage(ctrl);
 
             tray::init(&handle)?;
 
@@ -51,16 +59,18 @@ pub fn run() {
 
             player::spawn_ticker(handle.clone());
 
-            // Populate initial queue with real YouTube Music tracks in the background.
-            let init_handle = handle.clone();
-            std::thread::spawn(move || {
-                if let Ok(tracks) = yt.home_tracks() {
-                    if !tracks.is_empty() {
-                        let ctrl = init_handle.state::<PlayerController>();
-                        ctrl.with(&init_handle, |p| p.set_initial_queue(tracks));
+            // Populate initial queue with real YouTube Music tracks if no session was restored.
+            if !session_restored {
+                let init_handle = handle.clone();
+                std::thread::spawn(move || {
+                    if let Ok(tracks) = yt.home_tracks() {
+                        if !tracks.is_empty() {
+                            let ctrl = init_handle.state::<PlayerController>();
+                            ctrl.with(&init_handle, |p| p.set_initial_queue(tracks));
+                        }
                     }
-                }
-            });
+                });
+            }
 
             // Only show the main window if not started with `--minimized`.
             let start_hidden = std::env::args().any(|a| a == "--minimized");
@@ -76,6 +86,9 @@ pub fn run() {
             // Closing the window either hides to the tray or exits, based on settings.
             if let WindowEvent::CloseRequested { api, .. } = _event {
                 if _window.label() == "main" {
+                    if let Some(ctrl) = _window.app_handle().try_state::<PlayerController>() {
+                        ctrl.save_session_now();
+                    }
                     let close_to_tray = _window
                         .app_handle()
                         .try_state::<Arc<SettingsManager>>()
@@ -131,7 +144,15 @@ pub fn run() {
             miniwin::window_set_mini_layout,
             miniwin::window_set_always_on_top,
             miniwin::window_start_drag,
+            miniwin::window_set_fullscreen,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running BetterYTMusic");
+        .build(tauri::generate_context!())
+        .expect("error while building BetterYTMusic")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. } = event {
+                if let Some(ctrl) = app_handle.try_state::<PlayerController>() {
+                    ctrl.save_session_now();
+                }
+            }
+        });
 }

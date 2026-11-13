@@ -77,6 +77,9 @@ use std::sync::Mutex;
         {
             let mut normal = state.normal.lock().map_err(|e| e.to_string())?;
             if normal.is_none() {
+                if win.is_fullscreen().unwrap_or(false) {
+                    let _ = win.set_fullscreen(false);
+                }
                 let maximized = win.is_maximized().unwrap_or(false);
                 if maximized {
                     let _ = win.unmaximize();
@@ -179,5 +182,12 @@ use std::sync::Mutex;
     pub fn window_start_drag(app: AppHandle) -> Result<(), String> {
         main_window(&app)?
             .start_dragging()
+            .map_err(|e| e.to_string())
+    }
+
+    #[tauri::command]
+    pub fn window_set_fullscreen(app: AppHandle, fullscreen: bool) -> Result<(), String> {
+        main_window(&app)?
+            .set_fullscreen(fullscreen)
             .map_err(|e| e.to_string())
     }

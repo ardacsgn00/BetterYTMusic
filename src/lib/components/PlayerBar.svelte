@@ -181,6 +181,16 @@
     <button
       type="button"
       class="btn ghost icon"
+      title="Tam Ekran Dinleme Modu (F)"
+      aria-label="Tam ekran dinleme modunu aç"
+      onclick={player.toggleFullscreen}
+    >
+      <Icon name="maximize" size={19} />
+    </button>
+
+    <button
+      type="button"
+      class="btn ghost icon"
       title="Mini Oynatıcı"
       aria-label="Mini oynatıcıya geç"
       onclick={mini.enter}

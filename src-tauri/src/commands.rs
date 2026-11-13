@@ -264,8 +264,15 @@ pub fn settings_get(cfg: Cfg<'_>) -> AppSettings {
 }
 
 #[tauri::command]
-pub fn settings_update(cfg: Cfg<'_>, settings: AppSettings) -> AppSettings {
-    cfg.update(settings)
+pub fn settings_update(
+    app: AppHandle,
+    cfg: Cfg<'_>,
+    ctrl: Ctrl<'_>,
+    settings: AppSettings,
+) -> AppSettings {
+    let updated = cfg.update(settings);
+    ctrl.with(&app, |p| p.set_normalization(updated.loudness_normalization));
+    updated
 }
 
 #[tauri::command]

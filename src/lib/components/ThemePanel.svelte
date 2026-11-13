@@ -571,6 +571,35 @@
       <div class="toggle-list">
         <div class="toggle-row">
           <div class="toggle-text">
+            <span class="t-title">Kaldığın Yerden Devam Et</span>
+            <span class="t-desc muted">Uygulama kapandığında kuyruğu ve şarkı konumunu kaydeder; bir sonraki açılışta aynı noktadan hazırlar.</span>
+          </div>
+          <button
+            class="btn toggle-btn"
+            class:accent={player.settings.resumeSession}
+            onclick={() => player.updateSettings({ resumeSession: !player.settings.resumeSession })}
+          >
+            {player.settings.resumeSession ? 'Açık' : 'Kapalı'}
+          </button>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="t-title">Ses Seviyesi Dengeleme (Loudness Normalization)</span>
+            <span class="t-desc muted">YouTube Music ses yüksekliği verisini kullanarak parçalar arasındaki ani ses farklarını dengeler.</span>
+          </div>
+          <button
+            class="btn toggle-btn"
+            class:accent={player.settings.loudnessNormalization}
+            onclick={() =>
+              player.updateSettings({ loudnessNormalization: !player.settings.loudnessNormalization })}
+          >
+            {player.settings.loudnessNormalization ? 'Açık' : 'Kapalı'}
+          </button>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-text">
             <span class="t-title">Kuyruk Sonu Otomatik Çalma (Autoplay)</span>
             <span class="t-desc muted">Sıradaki şarkılar bittiğinde YouTube Music benzer parçalarla kesintisiz çalmaya devam eder.</span>
           </div>

@@ -59,6 +59,8 @@ export interface AppSettings {
   launchOnStartup: boolean;
   startMinimized: boolean;
   autoplay: boolean;
+  loudnessNormalization: boolean;
+  resumeSession: boolean;
   discordRpc: boolean;
   discordClientId: string;
   discordAppName: string;

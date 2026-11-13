@@ -41,6 +41,14 @@
       <div class="now-actions">
         <button
           class="btn now-action-btn"
+          title="Tam Ekran Dinleme Modunu Aç (F)"
+          onclick={() => player.setFullscreen(true)}
+        >
+          <Icon name="maximize" size={15} />
+          <span>Tam Ekran</span>
+        </button>
+        <button
+          class="btn now-action-btn"
           title="Bu şarkıyla benzer parçalardan radyo başlat"
           onclick={() => player.startRadio(track)}
         >

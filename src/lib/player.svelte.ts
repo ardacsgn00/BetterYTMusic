@@ -45,6 +45,8 @@ class PlayerStore {
     launchOnStartup: false,
     startMinimized: false,
     autoplay: true,
+    loudnessNormalization: true,
+    resumeSession: true,
     discordRpc: true,
     discordClientId: '1569629580694655006',
     discordAppName: 'BetterYTMusic',
@@ -52,6 +54,7 @@ class PlayerStore {
     discordShowTime: true,
     discordClearOnPause: false,
   });
+  fullscreen = $state(false);
   lyrics = $state<LyricsData | null>(null);
   lyricsLoading = $state(false);
   lyricsTrackId = $state<string | null>(null);
@@ -278,6 +281,17 @@ class PlayerStore {
 
   seekBy = (deltaMs: number) =>
     this.seek(Math.max(0, Math.min(this.position + deltaMs, this.state.durationMs)));
+
+  setFullscreen = async (enable: boolean) => {
+    this.fullscreen = enable;
+    try {
+      await invoke('window_set_fullscreen', { fullscreen: enable });
+    } catch {
+      /* ignore fullscreen IPC error when previewing outside Tauri */
+    }
+  };
+
+  toggleFullscreen = () => this.setFullscreen(!this.fullscreen);
 }
 
 export const player = new PlayerStore();

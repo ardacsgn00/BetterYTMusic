@@ -11,6 +11,7 @@
   import LibraryView from '#lib/components/LibraryView.svelte';
   import OnboardingModal from '#lib/components/OnboardingModal.svelte';
   import MiniPlayer from '#lib/components/MiniPlayer.svelte';
+  import FullscreenPlayer from '#lib/components/FullscreenPlayer.svelte';
   import ArtistView from '#lib/components/ArtistView.svelte';
   import Icon from '#lib/components/Icon.svelte';
   import { mini } from '#lib/mini.svelte.ts';
@@ -22,6 +23,12 @@
   let threeCol = $state(false);
   let nowGridEl = $state<HTMLElement | null>(null);
   let draggingHandle = $state<'2col' | '3left' | '3right' | null>(null);
+
+  $effect(() => {
+    if (mini.active && player.fullscreen) {
+      player.fullscreen = false;
+    }
+  });
 
   function selectView(v: View) {
     player.closeArtist();
@@ -59,7 +66,23 @@
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
       if ((t as HTMLInputElement).type !== 'range') return;
     }
-    if (e.code === 'Space') {
+    if (e.key === 'Escape' && player.fullscreen) {
+      e.preventDefault();
+      player.setFullscreen(false);
+    } else if (e.key === 'F11') {
+      e.preventDefault();
+      player.toggleFullscreen();
+    } else if (
+      (e.key === 'f' || e.key === 'F') &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      !mini.active &&
+      t?.tagName !== 'INPUT'
+    ) {
+      e.preventDefault();
+      player.toggleFullscreen();
+    } else if (e.code === 'Space') {
       e.preventDefault();
       player.toggle();
     } else if (e.key === 'ArrowRight' && e.ctrlKey) {
@@ -124,6 +147,8 @@
 
 {#if mini.active}
   <MiniPlayer />
+{:else if player.fullscreen}
+  <FullscreenPlayer />
 {:else}
 <div class="shell" class:is-resizing={draggingHandle !== null}>
   <Sidebar active={view} onselect={selectView} />
