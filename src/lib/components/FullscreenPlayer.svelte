@@ -360,7 +360,11 @@
         </div>
       </section>
 
-      <section class="card fs-right" aria-label={rightTab === 'lyrics' ? 'Şarkı Sözleri' : 'Sıradaki Şarkılar'}>
+      <section
+        class="fs-right"
+        class:card={rightTab === 'queue'}
+        aria-label={rightTab === 'lyrics' ? 'Şarkı Sözleri' : 'Sıradaki Şarkılar'}
+      >
         {#if rightTab === 'lyrics'}
           <LyricsPanel embedded={true} />
         {:else}
@@ -786,7 +790,11 @@
     min-height: 0;
     min-width: 0;
     overflow: hidden;
-    background: var(--surface);
+    background: transparent;
+  }
+
+  .fs-right :global(.lyr-body) {
+    padding: 8px 10px 8px 4px;
   }
 
   .fs-right :global(.queue) {
