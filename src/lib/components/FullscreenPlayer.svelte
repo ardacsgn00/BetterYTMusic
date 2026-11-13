@@ -11,9 +11,13 @@
 
   let rightTab = $state<'lyrics' | 'queue'>('lyrics');
   let lastVolume = 0.8;
+  let isIdle = $state(false);
 
+  const IDLE_TIMEOUT_MS = 2600;
   const s = $derived(player.state);
   const track = $derived(s.track);
+  const hasTrack = $derived(Boolean(track));
+  const hideChrome = $derived(isIdle && hasTrack);
   const liked = $derived(library.isFavorite(track?.id));
   const endTimeLabel = $derived.by(() => {
     if (theme.showRemainingTime && s.durationMs > 0) {
@@ -25,6 +29,97 @@
   const repeatLabel = $derived(
     s.repeat === 'one' ? 'Tekrar: tek şarkı' : s.repeat === 'all' ? 'Tekrar: tüm kuyruk' : 'Tekrar: kapalı'
   );
+
+  // Auto-hide controls after pointer inactivity when a track is loaded.
+  // Depend only on `hasTrack` so advancing between tracks keeps idle cinema state undisturbed.
+  $effect(() => {
+    if (!hasTrack) {
+      isIdle = false;
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let isPointerDown = false;
+    let lastX: number | null = null;
+    let lastY: number | null = null;
+
+    const clearTimer = () => {
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    const scheduleIdle = () => {
+      clearTimer();
+      if (isPointerDown) return;
+      timer = setTimeout(() => {
+        isIdle = true;
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    const wake = () => {
+      if (isIdle) isIdle = false;
+      scheduleIdle();
+    };
+
+    const onPointerMove = (e: PointerEvent | MouseEvent) => {
+      // Ignore synthetic 0-1px jitter caused by layout animations under a stationary cursor.
+      if (
+        lastX !== null &&
+        lastY !== null &&
+        Math.abs(e.clientX - lastX) < 2 &&
+        Math.abs(e.clientY - lastY) < 2
+      ) {
+        return;
+      }
+      lastX = e.clientX;
+      lastY = e.clientY;
+      wake();
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      isPointerDown = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      wake();
+    };
+
+    const onPointerUp = () => {
+      isPointerDown = false;
+      scheduleIdle();
+    };
+
+    const onKeyDown = () => wake();
+    const onTouchStart = () => wake();
+    const onWindowBlur = () => {
+      isPointerDown = false;
+    };
+
+    isIdle = false;
+    scheduleIdle();
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('mousemove', onPointerMove, { passive: true });
+    window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('pointerup', onPointerUp, { passive: true });
+    window.addEventListener('pointercancel', onPointerUp, { passive: true });
+    window.addEventListener('keydown', onKeyDown, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('blur', onWindowBlur, { passive: true });
+
+    return () => {
+      clearTimer();
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('blur', onWindowBlur);
+    };
+  });
 
   function toggleMute() {
     if (s.volume > 0) {
@@ -42,58 +137,62 @@
   }
 </script>
 
-<div class="fs-root" role="dialog" aria-label="Tam Ekran Oynatıcı">
-  <header class="fs-top">
-    <div class="fs-source-group">
-      <span class="fs-pill">{s.sourceName || 'Şimdi Çalıyor'}</span>
-      {#if s.queue.length > 0 && s.index !== null}
-        <span class="fs-count">{s.index + 1} / {s.queue.length}</span>
-      {/if}
-    </div>
-
-    <div class="fs-top-actions">
-      <div class="fs-tabs" role="tablist" aria-label="Tam ekran sağ panel">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={rightTab === 'lyrics'}
-          class="fs-tab"
-          class:active={rightTab === 'lyrics'}
-          onclick={() => (rightTab = 'lyrics')}
-        >
-          <Icon name="lyrics" size={16} />
-          <span>Şarkı Sözleri</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={rightTab === 'queue'}
-          class="fs-tab"
-          class:active={rightTab === 'queue'}
-          onclick={() => (rightTab = 'queue')}
-        >
-          <Icon name="now" size={16} />
-          <span>Sıradaki</span>
-          {#if s.queue.length > 0}
-            <span class="fs-tab-count">{s.queue.length}</span>
+<div class="fs-root" class:is-idle={hideChrome} role="dialog" aria-label="Tam Ekran Oynatıcı">
+  <div class="fs-top-collapse" aria-hidden={hideChrome}>
+    <div class="fs-top-inner">
+      <header class="fs-top">
+        <div class="fs-source-group">
+          <span class="fs-pill">{s.sourceName || 'Şimdi Çalıyor'}</span>
+          {#if s.queue.length > 0 && s.index !== null}
+            <span class="fs-count">{s.index + 1} / {s.queue.length}</span>
           {/if}
-        </button>
-      </div>
+        </div>
 
-      <span class="fs-hint muted">F / Esc</span>
+        <div class="fs-top-actions">
+          <div class="fs-tabs" role="tablist" aria-label="Tam ekran sağ panel">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={rightTab === 'lyrics'}
+              class="fs-tab"
+              class:active={rightTab === 'lyrics'}
+              onclick={() => (rightTab = 'lyrics')}
+            >
+              <Icon name="lyrics" size={16} />
+              <span>Şarkı Sözleri</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={rightTab === 'queue'}
+              class="fs-tab"
+              class:active={rightTab === 'queue'}
+              onclick={() => (rightTab = 'queue')}
+            >
+              <Icon name="now" size={16} />
+              <span>Sıradaki</span>
+              {#if s.queue.length > 0}
+                <span class="fs-tab-count">{s.queue.length}</span>
+              {/if}
+            </button>
+          </div>
 
-      <button
-        type="button"
-        class="btn fs-exit"
-        title="Tam Ekrandan Çık (Esc)"
-        aria-label="Tam ekrandan çık"
-        onclick={() => player.setFullscreen(false)}
-      >
-        <Icon name="close" size={16} />
-        <span class="fs-exit-label">Tam Ekrandan Çık</span>
-      </button>
+          <span class="fs-hint muted">F / Esc</span>
+
+          <button
+            type="button"
+            class="btn fs-exit"
+            title="Tam Ekrandan Çık (Esc)"
+            aria-label="Tam ekrandan çık"
+            onclick={() => player.setFullscreen(false)}
+          >
+            <Icon name="close" size={16} />
+            <span class="fs-exit-label">Tam Ekrandan Çık</span>
+          </button>
+        </div>
+      </header>
     </div>
-  </header>
+  </div>
 
   {#if track}
     <main class="fs-stage">
@@ -104,154 +203,160 @@
           </div>
         </div>
 
-        <div class="fs-meta">
-          <h1 class="fs-title">{track.title}</h1>
-          <div class="fs-sub-row">
-            <button
-              type="button"
-              class="fs-artist"
-              title="{track.artist} Sanatçı Sayfasını Aç"
-              onclick={openArtistFromFullscreen}
-            >
-              {track.artist}
-            </button>
-            {#if track.album}
-              <span class="fs-dot">•</span>
-              <span class="fs-album truncate">{track.album}</span>
-            {/if}
+        <div class="fs-dock-collapse" aria-hidden={hideChrome}>
+          <div class="fs-dock-inner">
+            <div class="fs-dock-content">
+              <div class="fs-meta">
+                <h1 class="fs-title">{track.title}</h1>
+                <div class="fs-sub-row">
+                  <button
+                    type="button"
+                    class="fs-artist"
+                    title="{track.artist} Sanatçı Sayfasını Aç"
+                    onclick={openArtistFromFullscreen}
+                  >
+                    {track.artist}
+                  </button>
+                  {#if track.album}
+                    <span class="fs-dot">•</span>
+                    <span class="fs-album truncate">{track.album}</span>
+                  {/if}
+                </div>
+              </div>
+
+              <div class="fs-actions">
+                <button
+                  type="button"
+                  class="btn fs-action-btn"
+                  class:accent={liked}
+                  title={liked ? 'Beğenilenlerden kaldır' : 'Beğenilenlere ekle'}
+                  onclick={() => library.toggle(track)}
+                >
+                  <Icon name={liked ? 'heart-fill' : 'heart'} size={16} />
+                  <span>{liked ? 'Beğenildi' : 'Beğen'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn fs-action-btn"
+                  title="Bu şarkıyla benzer parçalardan radyo başlat"
+                  onclick={() => player.startRadio(track)}
+                >
+                  <Icon name="radio" size={16} />
+                  <span>Şarkı Radyosu</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn fs-action-btn"
+                  class:accent={player.settings.autoplay}
+                  title="Kuyruk bitince benzer şarkıları otomatik çal"
+                  onclick={() => player.updateSettings({ autoplay: !player.settings.autoplay })}
+                >
+                  <Icon name="autoplay" size={16} />
+                  <span>Otomatik</span>
+                </button>
+              </div>
+
+              <div class="fs-progress">
+                <Slider
+                  label="Şarkı konumu"
+                  value={player.position}
+                  max={s.durationMs}
+                  step={250}
+                  oncommit={(v) => player.seek(v)}
+                />
+                <div class="fs-times">
+                  <span>{formatTime(player.position)}</span>
+                  <button
+                    type="button"
+                    class="fs-time-btn"
+                    title={theme.showRemainingTime ? 'Toplam süreyi göster' : 'Kalan süreyi göster'}
+                    onclick={() => theme.toggleRemainingTime()}
+                  >
+                    {endTimeLabel}
+                  </button>
+                </div>
+              </div>
+
+              <div class="fs-controls">
+                <button
+                  type="button"
+                  class="btn ghost icon fs-side-ctrl"
+                  class:on={s.repeat !== 'off'}
+                  title={repeatLabel}
+                  aria-label={repeatLabel}
+                  onclick={player.cycleRepeat}
+                >
+                  <Icon name={s.repeat === 'one' ? 'repeat-one' : 'repeat'} size={21} />
+                </button>
+
+                <button
+                  type="button"
+                  class="btn icon fs-skip-btn"
+                  title="Önceki"
+                  aria-label="Önceki"
+                  onclick={player.previous}
+                >
+                  <Icon name="prev" size={22} />
+                </button>
+
+                <button
+                  type="button"
+                  class="btn accent icon fs-play-btn"
+                  class:squircle={theme.playButtonShape === 'squircle'}
+                  title={s.isPlaying ? 'Duraklat' : 'Oynat'}
+                  aria-label={s.isPlaying ? 'Duraklat' : 'Oynat'}
+                  onclick={player.toggle}
+                >
+                  <Icon name={s.isPlaying ? 'pause' : 'play'} size={28} />
+                </button>
+
+                <button
+                  type="button"
+                  class="btn icon fs-skip-btn"
+                  title="Sonraki"
+                  aria-label="Sonraki"
+                  onclick={player.next}
+                >
+                  <Icon name="next" size={22} />
+                </button>
+
+                <button
+                  type="button"
+                  class="btn ghost icon fs-side-ctrl"
+                  class:on={s.shuffle}
+                  title={s.shuffle ? 'Karışık çal: açık' : 'Karışık çal: kapalı'}
+                  aria-label={s.shuffle ? 'Karışık çal: açık' : 'Karışık çal: kapalı'}
+                  onclick={player.toggleShuffle}
+                >
+                  <Icon name="shuffle" size={21} />
+                </button>
+              </div>
+
+              <div class="fs-volume">
+                <button
+                  type="button"
+                  class="btn ghost icon"
+                  title="Sessiz"
+                  aria-label="Sessiz"
+                  onclick={toggleMute}
+                >
+                  <Icon name={volumeIcon} size={20} />
+                </button>
+                <div class="fs-vol-slider">
+                  <Slider
+                    label="Ses seviyesi"
+                    value={s.volume * 100}
+                    max={100}
+                    onpreview={(v) => player.setVolume(v / 100)}
+                    oncommit={(v) => player.setVolume(v / 100)}
+                  />
+                </div>
+                <span class="fs-vol-pct muted">{Math.round(s.volume * 100)}%</span>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div class="fs-actions">
-          <button
-            type="button"
-            class="btn fs-action-btn"
-            class:accent={liked}
-            title={liked ? 'Beğenilenlerden kaldır' : 'Beğenilenlere ekle'}
-            onclick={() => library.toggle(track)}
-          >
-            <Icon name={liked ? 'heart-fill' : 'heart'} size={16} />
-            <span>{liked ? 'Beğenildi' : 'Beğen'}</span>
-          </button>
-
-          <button
-            type="button"
-            class="btn fs-action-btn"
-            title="Bu şarkıyla benzer parçalardan radyo başlat"
-            onclick={() => player.startRadio(track)}
-          >
-            <Icon name="radio" size={16} />
-            <span>Şarkı Radyosu</span>
-          </button>
-
-          <button
-            type="button"
-            class="btn fs-action-btn"
-            class:accent={player.settings.autoplay}
-            title="Kuyruk bitince benzer şarkıları otomatik çal"
-            onclick={() => player.updateSettings({ autoplay: !player.settings.autoplay })}
-          >
-            <Icon name="autoplay" size={16} />
-            <span>Otomatik</span>
-          </button>
-        </div>
-
-        <div class="fs-progress">
-          <Slider
-            label="Şarkı konumu"
-            value={player.position}
-            max={s.durationMs}
-            step={250}
-            oncommit={(v) => player.seek(v)}
-          />
-          <div class="fs-times">
-            <span>{formatTime(player.position)}</span>
-            <button
-              type="button"
-              class="fs-time-btn"
-              title={theme.showRemainingTime ? 'Toplam süreyi göster' : 'Kalan süreyi göster'}
-              onclick={() => theme.toggleRemainingTime()}
-            >
-              {endTimeLabel}
-            </button>
-          </div>
-        </div>
-
-        <div class="fs-controls">
-          <button
-            type="button"
-            class="btn ghost icon fs-side-ctrl"
-            class:on={s.repeat !== 'off'}
-            title={repeatLabel}
-            aria-label={repeatLabel}
-            onclick={player.cycleRepeat}
-          >
-            <Icon name={s.repeat === 'one' ? 'repeat-one' : 'repeat'} size={21} />
-          </button>
-
-          <button
-            type="button"
-            class="btn icon fs-skip-btn"
-            title="Önceki"
-            aria-label="Önceki"
-            onclick={player.previous}
-          >
-            <Icon name="prev" size={22} />
-          </button>
-
-          <button
-            type="button"
-            class="btn accent icon fs-play-btn"
-            class:squircle={theme.playButtonShape === 'squircle'}
-            title={s.isPlaying ? 'Duraklat' : 'Oynat'}
-            aria-label={s.isPlaying ? 'Duraklat' : 'Oynat'}
-            onclick={player.toggle}
-          >
-            <Icon name={s.isPlaying ? 'pause' : 'play'} size={28} />
-          </button>
-
-          <button
-            type="button"
-            class="btn icon fs-skip-btn"
-            title="Sonraki"
-            aria-label="Sonraki"
-            onclick={player.next}
-          >
-            <Icon name="next" size={22} />
-          </button>
-
-          <button
-            type="button"
-            class="btn ghost icon fs-side-ctrl"
-            class:on={s.shuffle}
-            title={s.shuffle ? 'Karışık çal: açık' : 'Karışık çal: kapalı'}
-            aria-label={s.shuffle ? 'Karışık çal: açık' : 'Karışık çal: kapalı'}
-            onclick={player.toggleShuffle}
-          >
-            <Icon name="shuffle" size={21} />
-          </button>
-        </div>
-
-        <div class="fs-volume">
-          <button
-            type="button"
-            class="btn ghost icon"
-            title="Sessiz"
-            aria-label="Sessiz"
-            onclick={toggleMute}
-          >
-            <Icon name={volumeIcon} size={20} />
-          </button>
-          <div class="fs-vol-slider">
-            <Slider
-              label="Ses seviyesi"
-              value={s.volume * 100}
-              max={100}
-              onpreview={(v) => player.setVolume(v / 100)}
-              oncommit={(v) => player.setVolume(v / 100)}
-            />
-          </div>
-          <span class="fs-vol-pct muted">{Math.round(s.volume * 100)}%</span>
         </div>
       </section>
 
@@ -287,8 +392,43 @@
     background: var(--bg);
     color: var(--text);
     padding: 18px 28px 24px;
-    gap: 18px;
+    gap: 0;
     overflow: hidden;
+  }
+
+  .fs-root.is-idle {
+    cursor: none;
+  }
+
+  .fs-top-collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    margin-bottom: 12px;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      grid-template-rows 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      margin-bottom 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 220ms ease,
+      transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .fs-top-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .fs-root.is-idle .fs-top-collapse {
+    grid-template-rows: 0fr;
+    margin-bottom: 0;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition:
+      grid-template-rows 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      margin-bottom 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 300ms ease,
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .fs-top {
@@ -299,6 +439,7 @@
     max-width: 1420px;
     width: 100%;
     margin: 0 auto;
+    padding: 2px 4px 6px;
     flex-shrink: 0;
   }
 
@@ -420,7 +561,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 16px;
+    gap: 0;
     min-height: 0;
     padding: 8px 12px;
   }
@@ -431,10 +572,59 @@
     background: var(--surface);
     border: 2px solid var(--border);
     box-shadow: 0 var(--edge-depth) 0 var(--edge);
+    transform: scale(1);
+    transform-origin: center;
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .fs-root.is-idle .fs-cover-frame {
+    transform: scale(1.12);
+    transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .fs-cover-wrap {
     width: min(360px, 34vw, 39dvh);
+  }
+
+  .fs-dock-collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    width: 100%;
+    margin-top: 14px;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      grid-template-rows 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      margin-top 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 220ms ease,
+      transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .fs-dock-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .fs-dock-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 2px 6px 8px;
+  }
+
+  .fs-root.is-idle .fs-dock-collapse {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    opacity: 0;
+    transform: translateY(14px);
+    pointer-events: none;
+    transition:
+      grid-template-rows 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      margin-top 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 300ms ease,
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .fs-meta {
@@ -655,9 +845,21 @@
       width: min(260px, 66vw);
     }
 
+    .fs-root.is-idle .fs-cover-frame {
+      transform: scale(1.06);
+    }
+
     .fs-right {
       min-height: 400px;
       max-height: 62dvh;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fs-top-collapse,
+    .fs-dock-collapse,
+    .fs-cover-frame {
+      transition-duration: 140ms;
     }
   }
 

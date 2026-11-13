@@ -352,7 +352,7 @@ p {
   box-shadow: none;
 }
 
-/* Settings block, Hero, Guide Modal, and Popovers remain separated with a subtle clean surface */
+/* Settings block, Hero, Guide Modal, Fullscreen panel, and Popovers remain separated with a subtle clean surface */
 :root[data-ui-style='seamless'] .card.block,
 :root[data-ui-style='seamless'] .guide-card,
 :root[data-ui-style='seamless'] .karaoke-card,
@@ -363,10 +363,18 @@ p {
 :root[data-ui-style='seamless'] .artist-banner,
 :root[data-ui-style='seamless'] .card.empty,
 :root[data-ui-style='seamless'] .card.msg,
-:root[data-ui-style='seamless'] .zoom-popover {
+:root[data-ui-style='seamless'] .fs-right,
+:root[data-ui-style='seamless'] .fs-empty-card,
+:root[data-ui-style='seamless'] .zoom-popover,
+:root[data-ui-style='seamless'] .device-popover {
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: none;
+}
+
+:root[data-ui-style='seamless'] .zoom-popover,
+:root[data-ui-style='seamless'] .device-popover {
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.48);
 }
 
 :root[data-ui-style='seamless'] .btn {

@@ -376,13 +376,17 @@
     position: absolute;
     bottom: calc(100% + 12px);
     right: 0;
-    z-index: 60;
+    z-index: 120;
     width: 280px;
     max-width: calc(100vw - 32px);
     padding: 10px;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    background: var(--surface);
+    box-shadow:
+      0 var(--edge-depth) 0 var(--edge),
+      0 12px 28px rgb(0 0 0 / 0.45);
   }
   .dev-head {
     padding: 2px 6px 4px;
