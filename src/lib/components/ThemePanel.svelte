@@ -62,12 +62,26 @@
     else if (tab === 'playback') previewScene = 'now';
   }
 
-  const modes: { id: ThemeMode; label: string; desc: string }[] = [
-    { id: 'dark', label: 'Koyu', desc: 'Kömür gri' },
-    { id: 'oled', label: 'Gece Siyahı', desc: 'Tam siyah' },
-    { id: 'slate', label: 'Kuzey Mavisi', desc: 'Koyu arduvaz' },
-    { id: 'light', label: 'Açık', desc: 'Sıcak krem' },
-    { id: 'system', label: 'Sistem', desc: 'Otomatik' }
+  const modes: {
+    id: ThemeMode;
+    label: string;
+    desc: string;
+    bg: string;
+    surface: string;
+    text: string;
+  }[] = [
+    { id: 'dark', label: 'Koyu', desc: 'Kömür gri', bg: '#121215', surface: '#26262d', text: '#f2f2f5' },
+    { id: 'oled', label: 'Gece Siyahı', desc: 'Tam siyah', bg: '#070709', surface: '#18181f', text: '#f5f5f8' },
+    { id: 'slate', label: 'Kuzey Mavisi', desc: 'Koyu arduvaz', bg: '#0f141c', surface: '#202b3c', text: '#eef3fa' },
+    { id: 'forest', label: 'Çam Ormanı', desc: 'Derin zümrüt', bg: '#0c1512', surface: '#1b2c25', text: '#edf6f1' },
+    { id: 'plum', label: 'Velvet Erik', desc: 'Koyu mor', bg: '#130e19', surface: '#261d33', text: '#f3eff9' },
+    { id: 'espresso', label: 'Kahve Kavurma', desc: 'Sıcak kahve', bg: '#171210', surface: '#2d241f', text: '#f6efe9' },
+    { id: 'crimson', label: 'Akustik Şarap', desc: 'Derin bordo', bg: '#180d11', surface: '#2f1a22', text: '#f8eff2' },
+    { id: 'nord', label: 'Buzul Nord', desc: 'Kutup mavisi', bg: '#242933', surface: '#3b4252', text: '#eceff4' },
+    { id: 'light', label: 'Açık', desc: 'Sıcak krem', bg: '#f2f1ed', surface: '#ffffff', text: '#19191d' },
+    { id: 'sepia', label: 'Parşömen Sepya', desc: 'Kağıt tonu', bg: '#efe8d8', surface: '#f8f3e8', text: '#2a241c' },
+    { id: 'mint', label: 'Buzlu Mint', desc: 'Ferah nane', bg: '#e7f0ec', surface: '#f6fbf9', text: '#14221d' },
+    { id: 'system', label: 'Sistem', desc: 'Otomatik', bg: '#121215', surface: '#f2f1ed', text: '#ff4e45' }
   ];
 
   const fontScales: { id: FontScale; label: string }[] = [
@@ -144,6 +158,7 @@
     theme.sidebarCollapsed ? 38 : Math.round(74 + ((theme.sidebarWidth - 172) / (320 - 172)) * 30)
   );
   const activeFontLabel = $derived((FONT_PRESETS.find((f) => f.id === theme.font) ?? FONT_PRESETS[0]).label);
+  const activeModeLabel = $derived((modes.find((m) => m.id === theme.resolved) ?? modes[0]).label);
   const edgeLabel = $derived(
     !simBoxed
       ? 'Akıcı (0px)'
@@ -235,7 +250,14 @@
                   aria-checked={theme.mode === m.id}
                   onclick={() => theme.setMode(m.id)}
                 >
-                  <span class="m-title">{m.label}</span>
+                  <span class="m-top">
+                    <span class="m-title">{m.label}</span>
+                    <span class="m-palette" aria-hidden="true">
+                      <span style:background-color={m.bg}></span>
+                      <span style:background-color={m.surface}></span>
+                      <span style:background-color={m.text}></span>
+                    </span>
+                  </span>
                   <span class="m-sub">{m.desc}</span>
                 </button>
               {/each}
@@ -1354,7 +1376,7 @@
             <span class="sim-stat-k muted">Tema & Yazı</span>
             <span class="sim-stat-v truncate">
               <span class="sim-swatch-dot" style:background-color={theme.accent}></span>
-              {theme.resolved.toUpperCase()} · {activeFontLabel}
+              {activeModeLabel} · {activeFontLabel}
             </span>
           </div>
           <div class="sim-stat">
@@ -1476,21 +1498,47 @@
 
   .modes {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
     gap: 8px;
   }
 
   .mode-btn {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     padding: 9px 11px;
-    gap: 2px;
+    gap: 4px;
     height: auto;
+    text-align: left;
+  }
+
+  .m-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
   }
 
   .m-title {
     font-weight: 700;
-    font-size: 13.5px;
+    font-size: 13px;
+  }
+
+  .m-palette {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .m-palette > span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
   }
 
   .m-sub {

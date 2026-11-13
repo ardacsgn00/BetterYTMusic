@@ -1,6 +1,33 @@
 import type { View, SearchPlacement } from '#lib/types.ts';
 
-export type ThemeMode = 'dark' | 'oled' | 'slate' | 'light' | 'system';
+export type ThemeMode =
+  | 'dark'
+  | 'oled'
+  | 'slate'
+  | 'forest'
+  | 'plum'
+  | 'espresso'
+  | 'crimson'
+  | 'nord'
+  | 'light'
+  | 'sepia'
+  | 'mint'
+  | 'system';
+
+const VALID_THEME_MODES: readonly ThemeMode[] = [
+  'dark',
+  'oled',
+  'slate',
+  'forest',
+  'plum',
+  'espresso',
+  'crimson',
+  'nord',
+  'light',
+  'sepia',
+  'mint',
+  'system'
+];
 export type FontId =
   | 'system'
   | 'geometric'
@@ -179,7 +206,9 @@ class ThemeStore {
   init() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
-      if (saved.mode) this.mode = saved.mode;
+      if (saved.mode && VALID_THEME_MODES.includes(saved.mode)) {
+        this.mode = saved.mode;
+      }
       if (saved.accent) this.accent = saved.accent;
       if (saved.font && saved.font !== 'system') {
         this.font = saved.font;
@@ -272,7 +301,7 @@ class ThemeStore {
     return this.startupView === 'last' ? this.lastView : this.startupView;
   }
 
-  get resolved(): 'dark' | 'oled' | 'slate' | 'light' {
+  get resolved(): Exclude<ThemeMode, 'system'> {
     if (this.mode !== 'system') return this.mode;
     return this.#media?.matches ? 'light' : 'dark';
   }

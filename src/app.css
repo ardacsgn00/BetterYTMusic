@@ -1,6 +1,6 @@
 /* ==========================================================================
    Theme tokens
-   - `data-theme` on <html> selects dark/oled/slate/light palette.
+   - `data-theme` on <html> selects active palette.
    - `--accent` is user-configurable (set from theme store); derived shades
      are computed with color-mix so only one variable has to change.
    ========================================================================== */
@@ -56,6 +56,66 @@
   --text-muted: #94a3b8;
 }
 
+:root[data-theme='forest'] {
+  color-scheme: dark;
+  --bg: #0c1512;
+  --surface: #13201b;
+  --surface-2: #1b2c25;
+  --surface-3: #243a31;
+  --border: #2a4339;
+  --edge: #060b09;
+  --text: #edf6f1;
+  --text-muted: #93b0a2;
+}
+
+:root[data-theme='plum'] {
+  color-scheme: dark;
+  --bg: #130e19;
+  --surface: #1c1525;
+  --surface-2: #261d33;
+  --surface-3: #322742;
+  --border: #3a2d4c;
+  --edge: #09060d;
+  --text: #f3eff9;
+  --text-muted: #a699b9;
+}
+
+:root[data-theme='espresso'] {
+  color-scheme: dark;
+  --bg: #171210;
+  --surface: #221b17;
+  --surface-2: #2d241f;
+  --surface-3: #3a2f28;
+  --border: #43362e;
+  --edge: #0c0907;
+  --text: #f6efe9;
+  --text-muted: #b1a095;
+}
+
+:root[data-theme='crimson'] {
+  color-scheme: dark;
+  --bg: #180d11;
+  --surface: #231319;
+  --surface-2: #2f1a22;
+  --surface-3: #3d232d;
+  --border: #482935;
+  --edge: #0b0508;
+  --text: #f8eff2;
+  --text-muted: #b595a1;
+}
+
+:root[data-theme='nord'] {
+  color-scheme: dark;
+  --bg: #242933;
+  --surface: #2e3440;
+  --surface-2: #3b4252;
+  --surface-3: #434c5e;
+  --border: #4c566a;
+  --edge: #191d24;
+  --text: #eceff4;
+  --text-muted: #aeb9cc;
+}
+
 :root[data-theme='light'] {
   color-scheme: light;
   --bg: #f2f1ed;
@@ -66,6 +126,30 @@
   --edge: #b9b5ac;
   --text: #19191d;
   --text-muted: #686874;
+}
+
+:root[data-theme='sepia'] {
+  color-scheme: light;
+  --bg: #efe8d8;
+  --surface: #f8f3e8;
+  --surface-2: #e5dcc9;
+  --surface-3: #d8cdb7;
+  --border: #cdc1a8;
+  --edge: #b1a389;
+  --text: #2a241c;
+  --text-muted: #6c6050;
+}
+
+:root[data-theme='mint'] {
+  color-scheme: light;
+  --bg: #e7f0ec;
+  --surface: #f6fbf9;
+  --surface-2: #dce8e2;
+  --surface-3: #ccdcd5;
+  --border: #bfd2c9;
+  --edge: #9eb4aa;
+  --text: #14221d;
+  --text-muted: #536b62;
 }
 
 /* ==========================================================================

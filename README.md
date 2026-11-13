@@ -7,7 +7,7 @@
 **Hafif, hızlı ve kişiselleştirilebilir masaüstü YouTube Music istemcisi**  
 *Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows & macOS*
 
-[![Version](https://img.shields.io/badge/version-v0.28.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Version](https://img.shields.io/badge/version-v0.29.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Built with Tauri](https://img.shields.io/badge/Tauri_2-Rust_%2B_Svelte_5-06d6a0?style=for-the-badge)](https://tauri.app)
 [![Developer](https://img.shields.io/badge/Geli%C5%9Ftirici-Arda_Co%C5%9Fgun-8338ec?style=for-the-badge)](https://github.com/ardacsgn00)
@@ -39,7 +39,7 @@
   - **macOS Entegrasyonu:** Apple Silicon (M-serisi) ve Intel Mac desteği, yerel macOS `MPNowPlayingInfoCenter` medya tuşları, macOS `LaunchAgents` açılış servisi ve yerel WebKit motoruyla ultra düşük bellek tüketimi (~60-80 MB RAM).
   - **Sistem Tepsisi (Tray) & Otomatik Başlatma:** Kapatıldığında arka planda çalma ve işletim sistemi başlangıcında otomatik başlatma.
 - **🎨 Dokunsal (Tactile) Arayüz & Geniş Kişiselleştirme:**
-  - **5 Tema Modu:** Koyu, Gece Siyahı (OLED), Kuzey Mavisi, Açık ve Sistem.
+  - **12 Tema Modu:** Koyu, Gece Siyahı (OLED), Kuzey Mavisi, Çam Ormanı, Velvet Erik, Kahve Kavurma, Akustik Şarap, Buzul Nord, Açık, Parşömen Sepya, Buzlu Mint ve Sistem.
   - **10 Vurgu Rengi + Özel Renk Seçici**, **5 Yazı Tipi Ailesi**, metin ölçeği, liste yoğunluğu, köşe yuvarlaklığı ve ayarlanabilir **3B Dokunsal Alt Kenar (`0px` – `6px`)**.
   - Sol üstteki uygulama başlığını istediğin metinle değiştirebilme ve uygulama içi **GitHub Güncelleme Denetleyicisi**.
 
