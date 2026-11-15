@@ -5,10 +5,10 @@
 # BetterYTMusic
 
 **Hafif, hızlı ve kişiselleştirilebilir masaüstü YouTube Music istemcisi**  
-*Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows & macOS*
+*Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows, macOS & Linux*
 
-[![Version](https://img.shields.io/badge/version-v0.33.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Version](https://img.shields.io/badge/version-v0.34.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Built with Tauri](https://img.shields.io/badge/Tauri_2-Rust_%2B_Svelte_5-06d6a0?style=for-the-badge)](https://tauri.app)
 [![Developer](https://img.shields.io/badge/Geli%C5%9Ftirici-Arda_Co%C5%9Fgun-8338ec?style=for-the-badge)](https://github.com/ardacsgn00)
 
@@ -37,6 +37,7 @@
   - **Discord Zengin Varlık (Rich Presence):** Discord profilinde anlık dinleme durumu; şarkı adı, sanatçı, albüm kapağı, canlı akan süre çubuğu ve arkadaşlarının şarkıyı tek tıkla dinleyebileceği "YouTube Music'te Aç" butonu.
   - **Windows Entegrasyonu:** Görev çubuğunda (`ITaskbarList3`) Spotify benzeri **Önceki / Oynat-Duraklat / Sonraki** küçük resim butonları ve Windows ses kaplaması (SMTC).
   - **macOS Entegrasyonu:** Apple Silicon (M-serisi) ve Intel Mac desteği, yerel macOS `MPNowPlayingInfoCenter` medya tuşları, macOS `LaunchAgents` açılış servisi ve yerel WebKit motoruyla ultra düşük bellek tüketimi (~60-80 MB RAM).
+  - **Linux Entegrasyonu:** Yerel `MPRIS` (`D-Bus`) medya tuşları ve masaüstü/kilit ekranı oynatıcı kontrolü, `PipeWire` / `PulseAudio` / `ALSA` ses çıkışı, `XDG Autostart` (`.AppImage` yolu korumasıyla), tek örnek Unix soketi, Wayland/X11 & NVIDIA WebKitGTK uyumluluğu.
   - **Sistem Tepsisi (Tray) & Otomatik Başlatma:** Kapatıldığında arka planda çalma ve işletim sistemi başlangıcında otomatik başlatma.
 - **🎨 Dokunsal (Tactile) Arayüz & Geniş Kişiselleştirme:**
   - **12 Tema Modu:** Koyu, Gece Siyahı (OLED), Kuzey Mavisi, Çam Ormanı, Velvet Erik, Kahve Kavurma, Akustik Şarap, Buzul Nord, Açık, Parşömen Sepya, Buzlu Mint ve Sistem.
@@ -62,14 +63,42 @@ macOS sürümleri GitHub Actions üzerinde otomatik olarak hem **Apple Silicon (
 2. **macOS İlk Açılış İzni:**
    - Apple Geliştirici sertifikası bulunmayan açık kaynak uygulamalarda olduğu gibi, ilk açılışta *"Geliştirici doğrulanamadı"* uyarısı alırsanız: uygulamaya **Sağ Tık (veya Control + Sol Tık) -> Aç** diyerek tek seferlik onay verebilirsiniz.
 
+### Linux (`.AppImage`, `.deb`, `.rpm`)
+Linux paketleri (`x86_64`) GitHub Actions üzerinden otomatik olarak derlenir (`ubuntu-22.04` tabanlı geniş dağıtım uyumluluğu):
+
+1. **İndirme:**
+   - [GitHub Actions - Build Linux Packages](https://github.com/ardacsgn00/betterytmusic/actions/workflows/build-linux.yml) sayfasından en son başarılı iş akışındaki **Artifacts** -> `BetterYTMusic-Linux-x86_64` arşivini veya [GitHub Releases](https://github.com/ardacsgn00/betterytmusic/releases) paketlerini indirin.
+2. **Kurulum / Çalıştırma:**
+   - **AppImage (Tüm dağıtımlar):**
+     ```bash
+     chmod +x BetterYTMusic*.AppImage
+     ./BetterYTMusic*.AppImage
+     ```
+   - **Debian / Ubuntu / Mint (`.deb`):**
+     ```bash
+     sudo apt install ./betterytmusic_*.deb
+     ```
+   - **Fedora / RHEL / openSUSE (`.rpm`):**
+     ```bash
+     sudo dnf install ./betterytmusic-*.rpm
+     ```
+   - *Not: AppImage dışında sistem paketi kurulumlarında `webkit2gtk-4.1` ve `libayatana-appindicator3` (sistem tepsisi destekleyen masaüstleri için) kullanılır. NVIDIA + WebKitGTK ortamlarında blank ekran sorununu önlemek için `WEBKIT_DISABLE_DMABUF_RENDERER=1` başlangıçta otomatik uygulanır.*
+
 ---
 
 ## 🛠️ Kaynak Koddan Derleme
 
 ### Gereksinimler
 - **Node.js** 20+
-- **Rust** 1.77+ (`stable-x86_64-pc-windows-msvc`)
-- **Visual Studio C++ Build Tools** & Windows 10/11 SDK
+- **Rust** 1.77+ (`stable`)
+- **Windows:** Visual Studio C++ Build Tools & Windows 10/11 SDK
+- **Linux (Ubuntu / Debian):**
+  ```bash
+  sudo apt update && sudo apt install -y \
+    libwebkit2gtk-4.1-dev build-essential curl wget file pkg-config \
+    libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
+    libasound2-dev libdbus-1-dev patchelf rpm
+  ```
 
 ### Adımlar
 

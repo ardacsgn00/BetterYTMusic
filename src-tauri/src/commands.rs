@@ -308,14 +308,22 @@ pub fn app_open_url(url: String) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
     }
     #[cfg(target_os = "macos")]
-    {
-        let _ = std::process::Command::new("open").arg(trimmed).spawn();
-    }
+    spawn_detached_opener("open", trimmed)?;
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-    {
-        let _ = std::process::Command::new("xdg-open").arg(trimmed).spawn();
-    }
+    spawn_detached_opener("xdg-open", trimmed)?;
     Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn spawn_detached_opener(program: &str, url: &str) -> Result<(), String> {
+    std::process::Command::new(program)
+        .arg(url)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("{program}: {e}"))
 }
 
 #[tauri::command]
@@ -347,9 +355,16 @@ pub async fn auth_login(app: AppHandle) -> Result<(), String> {
         .inner_size(520.0, 680.0)
         .center();
 
+    #[cfg(target_os = "macos")]
+    const AUTH_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+    #[cfg(target_os = "linux")]
+    const AUTH_USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+    #[cfg(all(not(target_os = "macos"), not(target_os = "linux")))]
+    const AUTH_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
     let app_for_load = app.clone();
     builder
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+        .user_agent(AUTH_USER_AGENT)
         .on_page_load(move |_win, payload| {
             if payload.event() != PageLoadEvent::Finished {
                 return;

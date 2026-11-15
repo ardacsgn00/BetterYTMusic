@@ -47,7 +47,9 @@ pub fn run() {
             };
             app.manage(ctrl);
 
-            tray::init(&handle)?;
+            if let Err(e) = tray::init(&handle) {
+                eprintln!("[tray] unavailable: {e}");
+            }
 
             // OS media controls (SMTC / MPRIS / NowPlaying) + hardware media keys.
             let media_tx = media::spawn(&handle);

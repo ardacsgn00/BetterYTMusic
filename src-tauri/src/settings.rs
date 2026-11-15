@@ -210,6 +210,85 @@ fn apply_platform_startup(enable: bool, minimized: bool) {
     }
 }
 
-#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+#[cfg(target_os = "linux")]
+fn escape_desktop_exec_arg(arg: &str) -> String {
+    let mut out = String::with_capacity(arg.len() + 2);
+    out.push('"');
+    for ch in arg.chars() {
+        match ch {
+            '\\' | '"' | '$' | '`' => {
+                out.push('\\');
+                out.push(ch);
+            }
+            '%' => out.push_str("%%"),
+            _ => out.push(ch),
+        }
+    }
+    out.push('"');
+    out
+}
+
+#[cfg(target_os = "linux")]
+fn linux_autostart_path() -> Option<std::path::PathBuf> {
+    let config_dir = std::env::var_os("XDG_CONFIG_HOME")
+        .filter(|v| !v.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .filter(|v| !v.is_empty())
+                .map(|home| std::path::PathBuf::from(home).join(".config"))
+        })?;
+    Some(config_dir.join("autostart").join("betterytmusic.desktop"))
+}
+
+#[cfg(target_os = "linux")]
+fn apply_platform_startup(enable: bool, minimized: bool) {
+    let Some(desktop_path) = linux_autostart_path() else {
+        return;
+    };
+    if !enable {
+        let _ = std::fs::remove_file(&desktop_path);
+        return;
+    }
+
+    // AppImage mounts into an ephemeral /tmp/.mount_* directory, so prefer $APPIMAGE when set.
+    let exe_path = std::env::var_os("APPIMAGE")
+        .filter(|v| !v.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::current_exe().ok());
+    let Some(exe) = exe_path else {
+        return;
+    };
+
+    if let Some(parent) = desktop_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    let quoted_exe = escape_desktop_exec_arg(&exe.to_string_lossy());
+    let exec_line = if minimized {
+        format!("{quoted_exe} --minimized")
+    } else {
+        quoted_exe
+    };
+    let desktop_entry = format!(
+        "[Desktop Entry]\n\
+         Type=Application\n\
+         Version=1.0\n\
+         Name=BetterYTMusic\n\
+         Comment=Lightweight YouTube Music desktop client\n\
+         Exec={exec_line}\n\
+         Icon=betterytmusic\n\
+         Terminal=false\n\
+         Categories=AudioVideo;Audio;Music;Player;\n\
+         X-GNOME-Autostart-enabled=true\n"
+    );
+    let _ = std::fs::write(&desktop_path, desktop_entry);
+}
+
+#[cfg(all(
+    not(target_os = "windows"),
+    not(target_os = "macos"),
+    not(target_os = "linux")
+))]
 fn apply_platform_startup(_enable: bool, _minimized: bool) {}
 

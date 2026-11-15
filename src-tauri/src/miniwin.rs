@@ -13,7 +13,7 @@ use std::sync::Mutex;
 
     #[derive(Clone, Copy)]
     struct NormalGeometry {
-        pos: PhysicalPosition<i32>,
+        pos: Option<PhysicalPosition<i32>>,
         size: PhysicalSize<u32>,
         maximized: bool,
     }
@@ -85,7 +85,7 @@ use std::sync::Mutex;
                     let _ = win.unmaximize();
                 }
                 *normal = Some(NormalGeometry {
-                    pos: win.outer_position().map_err(|e| e.to_string())?,
+                    pos: win.outer_position().ok(),
                     size: win.inner_size().map_err(|e| e.to_string())?,
                     maximized,
                 });
@@ -94,9 +94,9 @@ use std::sync::Mutex;
 
         let (w, h) = layout_size(&layout);
         let _ = win.set_fullscreen(false);
-        win.set_decorations(false).map_err(|e| e.to_string())?;
-        win.set_min_size(None::<Size>).map_err(|e| e.to_string())?;
-        win.set_resizable(false).map_err(|e| e.to_string())?;
+        let _ = win.set_decorations(false);
+        let _ = win.set_min_size(None::<Size>);
+        let _ = win.set_resizable(false);
         win.set_size(Size::Logical(LogicalSize::new(w, h)))
             .map_err(|e| e.to_string())?;
 
@@ -105,10 +105,10 @@ use std::sync::Mutex;
             .map(|p| PhysicalPosition::new(p.x, p.y))
             .or_else(|| default_position(&win, w, h));
         if let Some(p) = target {
-            win.set_position(Position::Physical(p)).map_err(|e| e.to_string())?;
+            let _ = win.set_position(Position::Physical(p));
         }
 
-        win.set_always_on_top(true).map_err(|e| e.to_string())?;
+        let _ = win.set_always_on_top(true);
         let _ = win.show();
         let _ = win.set_focus();
         Ok(())
@@ -118,17 +118,18 @@ use std::sync::Mutex;
     pub fn window_set_mini_layout(app: AppHandle, layout: String) -> Result<(), String> {
         let win = main_window(&app)?;
         let scale = win.scale_factor().unwrap_or(1.0);
-        let old_pos = win.outer_position().map_err(|e| e.to_string())?;
-        let old_size = win.outer_size().map_err(|e| e.to_string())?;
+        let old_pos = win.outer_position().ok();
+        let old_size = win.outer_size().ok();
         let (w, h) = layout_size(&layout);
         win.set_size(Size::Logical(LogicalSize::new(w, h)))
             .map_err(|e| e.to_string())?;
-        let right = old_pos.x + old_size.width as i32;
-        let bottom = old_pos.y + old_size.height as i32;
-        let nx = right - (w * scale) as i32;
-        let ny = bottom - (h * scale) as i32;
-        win.set_position(Position::Physical(PhysicalPosition::new(nx, ny)))
-            .map_err(|e| e.to_string())?;
+        if let (Some(pos), Some(size)) = (old_pos, old_size) {
+            let right = pos.x + size.width as i32;
+            let bottom = pos.y + size.height as i32;
+            let nx = right - (w * scale) as i32;
+            let ny = bottom - (h * scale) as i32;
+            let _ = win.set_position(Position::Physical(PhysicalPosition::new(nx, ny)));
+        }
         Ok(())
     }
 
@@ -145,17 +146,17 @@ use std::sync::Mutex;
 
         let normal = state.normal.lock().map_err(|e| e.to_string())?.take();
 
-        win.set_always_on_top(false).map_err(|e| e.to_string())?;
-        win.set_resizable(true).map_err(|e| e.to_string())?;
-        win.set_decorations(true).map_err(|e| e.to_string())?;
-        win.set_min_size(Some(Size::Logical(LogicalSize::new(NORMAL_MIN.0, NORMAL_MIN.1))))
-            .map_err(|e| e.to_string())?;
+        let _ = win.set_always_on_top(false);
+        let _ = win.set_resizable(true);
+        let _ = win.set_decorations(true);
+        let _ = win.set_min_size(Some(Size::Logical(LogicalSize::new(NORMAL_MIN.0, NORMAL_MIN.1))));
 
         match normal {
             Some(g) => {
                 win.set_size(Size::Physical(g.size)).map_err(|e| e.to_string())?;
-                win.set_position(Position::Physical(g.pos))
-                    .map_err(|e| e.to_string())?;
+                if let Some(pos) = g.pos {
+                    let _ = win.set_position(Position::Physical(pos));
+                }
                 if g.maximized {
                     let _ = win.maximize();
                 }
@@ -173,9 +174,8 @@ use std::sync::Mutex;
 
     #[tauri::command]
     pub fn window_set_always_on_top(app: AppHandle, on: bool) -> Result<(), String> {
-        main_window(&app)?
-            .set_always_on_top(on)
-            .map_err(|e| e.to_string())
+        let _ = main_window(&app)?.set_always_on_top(on);
+        Ok(())
     }
 
     #[tauri::command]

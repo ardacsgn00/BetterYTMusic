@@ -82,7 +82,7 @@ pub fn spawn(app: &AppHandle) -> Option<MediaSender> {
                             artist: Some(&artist),
                             album: Some(&album),
                             cover_url: cover_url.as_deref(),
-                            duration: Some(Duration::from_millis(duration_ms)),
+                            duration: (duration_ms > 0).then(|| Duration::from_millis(duration_ms)),
                         })
                     }
                     MediaUpdate::Playback { playing, position_ms } => {

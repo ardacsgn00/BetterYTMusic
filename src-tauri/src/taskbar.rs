@@ -3,7 +3,7 @@
 //! Displays Spotify-style transport buttons (Previous, Play/Pause, Next) directly
 //! inside the Windows taskbar hover thumbnail preview.
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(all(not(target_os = "windows"), not(target_os = "linux")))]
 use tauri::AppHandle;
 
 #[cfg(target_os = "windows")]
@@ -317,21 +317,125 @@ mod imp {
 #[cfg(target_os = "windows")]
 pub use imp::{acquire_single_instance, init, TaskbarHandle};
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "linux")]
+mod linux_imp {
+    use std::io::{ErrorKind, Read, Write};
+    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::net::{UnixListener, UnixStream};
+    use std::path::{Path, PathBuf};
+    use std::sync::{Mutex, OnceLock};
+    use tauri::AppHandle;
+
+    static LISTENER: OnceLock<Mutex<Option<UnixListener>>> = OnceLock::new();
+
+    #[derive(Clone, Copy)]
+    pub struct TaskbarHandle;
+
+    impl TaskbarHandle {
+        pub fn set_playing(&self, _playing: bool) {}
+    }
+
+    fn socket_path() -> PathBuf {
+        if let Some(dir) = std::env::var_os("XDG_RUNTIME_DIR").filter(|v| !v.is_empty()) {
+            return PathBuf::from(dir).join("betterytmusic.sock");
+        }
+        let uid = std::fs::read_to_string("/proc/self/status")
+            .ok()
+            .and_then(|s| {
+                s.lines()
+                    .find_map(|l| l.strip_prefix("Uid:"))
+                    .and_then(|v| v.split_whitespace().next())
+                    .map(str::to_string)
+            })
+            .unwrap_or_else(|| "0".to_string());
+        std::env::temp_dir().join(format!("betterytmusic-{uid}.sock"))
+    }
+
+    fn notify_existing(path: &Path) -> Result<(), std::io::Error> {
+        let mut stream = UnixStream::connect(path)?;
+        let _ = stream.write_all(b"SHOW\n");
+        let _ = stream.flush();
+        Ok(())
+    }
+
+    pub fn acquire_single_instance() -> bool {
+        let path = socket_path();
+        match notify_existing(&path) {
+            Ok(()) => return false,
+            Err(e) if e.kind() == ErrorKind::ConnectionRefused => {
+                let _ = std::fs::remove_file(&path);
+            }
+            Err(_) => {}
+        }
+
+        let listener = match UnixListener::bind(&path) {
+            Ok(l) => l,
+            Err(e) if e.kind() == ErrorKind::AddrInUse => {
+                if notify_existing(&path).is_ok() {
+                    return false;
+                }
+                let _ = std::fs::remove_file(&path);
+                match UnixListener::bind(&path) {
+                    Ok(l) => l,
+                    Err(err) => {
+                        eprintln!("[single-instance] unix socket unavailable: {err}");
+                        return true;
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("[single-instance] unix socket unavailable: {e}");
+                return true;
+            }
+        };
+
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+        let _ = LISTENER.set(Mutex::new(Some(listener)));
+        true
+    }
+
+    pub fn init(app: &AppHandle) -> Option<TaskbarHandle> {
+        let listener = LISTENER.get()?.lock().ok()?.take()?;
+        let handle = app.clone();
+        let _ = std::thread::Builder::new()
+            .name("betterytmusic-ipc".to_string())
+            .spawn(move || {
+                for incoming in listener.incoming() {
+                    let Ok(mut stream) = incoming else {
+                        continue;
+                    };
+                    let mut buf = [0u8; 32];
+                    let n = stream.read(&mut buf).unwrap_or(0);
+                    if n == 0 || buf[..n].starts_with(b"SHOW") {
+                        let h = handle.clone();
+                        let _ = handle.run_on_main_thread(move || {
+                            crate::tray::show_main_window(&h);
+                        });
+                    }
+                }
+            });
+        None
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub use linux_imp::{acquire_single_instance, init, TaskbarHandle};
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "linux")))]
 pub fn acquire_single_instance() -> bool {
     true
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(all(not(target_os = "windows"), not(target_os = "linux")))]
 #[derive(Clone, Copy)]
 pub struct TaskbarHandle;
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(all(not(target_os = "windows"), not(target_os = "linux")))]
 impl TaskbarHandle {
     pub fn set_playing(&self, _playing: bool) {}
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(all(not(target_os = "windows"), not(target_os = "linux")))]
 pub fn init(_app: &AppHandle) -> Option<TaskbarHandle> {
     None
 }

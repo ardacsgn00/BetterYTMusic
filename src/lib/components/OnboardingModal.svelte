@@ -572,7 +572,7 @@
               </div>
               <div class="perk-box">
                 <Icon name="windows" size={16} />
-                <span><strong>Tepsi & Medya Tuşları</strong><small class="muted">Windows & macOS tam uyumu</small></span>
+                <span><strong>Tepsi & Medya Tuşları</strong><small class="muted">Windows, macOS & Linux tam uyumu</small></span>
               </div>
             </div>
           </div>
