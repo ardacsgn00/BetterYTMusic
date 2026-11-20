@@ -1,12 +1,65 @@
 //! Mini player mode: the main window itself shrinks into a small, borderless,
 //! always-on-top widget on desktop.
 
-use std::sync::Mutex;
-    use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, State};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct MiniPos {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+mod imp {
+    use super::MiniPos;
+    use tauri::{AppHandle, State};
+
+    #[derive(Default)]
+    pub struct MiniState;
+
+    pub fn enter_mini(
+        _app: AppHandle,
+        _state: State<'_, MiniState>,
+        _layout: String,
+        _pos: Option<MiniPos>,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn set_mini_layout(_app: AppHandle, _layout: String) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn exit_mini(
+        _app: AppHandle,
+        _state: State<'_, MiniState>,
+    ) -> Result<Option<MiniPos>, String> {
+        Ok(None)
+    }
+
+    pub fn set_always_on_top(_app: AppHandle, _on: bool) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn start_drag(_app: AppHandle) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn set_fullscreen(_app: AppHandle, _fullscreen: bool) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+mod imp {
+    use std::sync::Mutex;
     use tauri::{
         AppHandle, LogicalSize, Manager, PhysicalPosition, PhysicalSize, Position, Size, State,
         WebviewWindow,
     };
+
+    use super::MiniPos;
 
     const NORMAL_MIN: (f64, f64) = (380.0, 560.0);
     const EDGE_MARGIN: f64 = 16.0;
@@ -21,12 +74,6 @@ use std::sync::Mutex;
     #[derive(Default)]
     pub struct MiniState {
         normal: Mutex<Option<NormalGeometry>>,
-    }
-
-    #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-    pub struct MiniPos {
-        pub x: i32,
-        pub y: i32,
     }
 
     fn main_window(app: &AppHandle) -> Result<WebviewWindow, String> {
@@ -65,8 +112,7 @@ use std::sync::Mutex;
             .unwrap_or(false)
     }
 
-    #[tauri::command]
-    pub fn window_enter_mini(
+    pub fn enter_mini(
         app: AppHandle,
         state: State<'_, MiniState>,
         layout: String,
@@ -114,8 +160,7 @@ use std::sync::Mutex;
         Ok(())
     }
 
-    #[tauri::command]
-    pub fn window_set_mini_layout(app: AppHandle, layout: String) -> Result<(), String> {
+    pub fn set_mini_layout(app: AppHandle, layout: String) -> Result<(), String> {
         let win = main_window(&app)?;
         let scale = win.scale_factor().unwrap_or(1.0);
         let old_pos = win.outer_position().ok();
@@ -133,8 +178,7 @@ use std::sync::Mutex;
         Ok(())
     }
 
-    #[tauri::command]
-    pub fn window_exit_mini(
+    pub fn exit_mini(
         app: AppHandle,
         state: State<'_, MiniState>,
     ) -> Result<Option<MiniPos>, String> {
@@ -172,22 +216,60 @@ use std::sync::Mutex;
         Ok(last)
     }
 
-    #[tauri::command]
-    pub fn window_set_always_on_top(app: AppHandle, on: bool) -> Result<(), String> {
+    pub fn set_always_on_top(app: AppHandle, on: bool) -> Result<(), String> {
         let _ = main_window(&app)?.set_always_on_top(on);
         Ok(())
     }
 
-    #[tauri::command]
-    pub fn window_start_drag(app: AppHandle) -> Result<(), String> {
+    pub fn start_drag(app: AppHandle) -> Result<(), String> {
         main_window(&app)?
             .start_dragging()
             .map_err(|e| e.to_string())
     }
 
-    #[tauri::command]
-    pub fn window_set_fullscreen(app: AppHandle, fullscreen: bool) -> Result<(), String> {
+    pub fn set_fullscreen(app: AppHandle, fullscreen: bool) -> Result<(), String> {
         main_window(&app)?
             .set_fullscreen(fullscreen)
             .map_err(|e| e.to_string())
     }
+}
+
+pub use imp::MiniState;
+
+#[tauri::command]
+pub fn window_enter_mini(
+    app: AppHandle,
+    state: State<'_, MiniState>,
+    layout: String,
+    pos: Option<MiniPos>,
+) -> Result<(), String> {
+    imp::enter_mini(app, state, layout, pos)
+}
+
+#[tauri::command]
+pub fn window_set_mini_layout(app: AppHandle, layout: String) -> Result<(), String> {
+    imp::set_mini_layout(app, layout)
+}
+
+#[tauri::command]
+pub fn window_exit_mini(
+    app: AppHandle,
+    state: State<'_, MiniState>,
+) -> Result<Option<MiniPos>, String> {
+    imp::exit_mini(app, state)
+}
+
+#[tauri::command]
+pub fn window_set_always_on_top(app: AppHandle, on: bool) -> Result<(), String> {
+    imp::set_always_on_top(app, on)
+}
+
+#[tauri::command]
+pub fn window_start_drag(app: AppHandle) -> Result<(), String> {
+    imp::start_drag(app)
+}
+
+#[tauri::command]
+pub fn window_set_fullscreen(app: AppHandle, fullscreen: bool) -> Result<(), String> {
+    imp::set_fullscreen(app, fullscreen)
+}

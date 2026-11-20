@@ -14,6 +14,10 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version)
   },
+  build: {
+    target: 'chrome80',
+    cssTarget: 'chrome80'
+  },
   // Tauri expects a fixed port and its own error output.
   clearScreen: false,
   server: {

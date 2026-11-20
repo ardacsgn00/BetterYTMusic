@@ -291,6 +291,14 @@
                 </div>
                 <button
                   class="btn ghost icon pl-radio"
+                  title="Sıradaki Olarak Çal"
+                  aria-label="Sıradaki Olarak Çal"
+                  onclick={() => player.playNext(track)}
+                >
+                  <Icon name="list-plus" size={16} />
+                </button>
+                <button
+                  class="btn ghost icon pl-radio"
                   title="Şarkı Radyosu Başlat"
                   aria-label="Şarkı Radyosu Başlat"
                   onclick={() => player.startRadio(track)}
@@ -360,13 +368,24 @@
             <span class="ab-subs muted">{artistResult.subscribers}</span>
           {/if}
         </div>
-        <button
-          class="btn accent ab-btn"
-          onclick={() => player.openArtist(artistResult!.channelId)}
-        >
-          <Icon name="user" size={16} />
-          Sanatçı Sayfasını Aç
-        </button>
+        <div class="ab-actions">
+          <button
+            class="btn ab-btn"
+            disabled={player.radioLoading}
+            title="{artistResult.name} sanatçı radyosunu başlat"
+            onclick={() => player.startArtistRadio(artistResult!.name, artistResult!.channelId)}
+          >
+            <Icon name="radio" size={16} />
+            Sanatçı Radyosu
+          </button>
+          <button
+            class="btn accent ab-btn"
+            onclick={() => player.openArtist(artistResult!.channelId)}
+          >
+            <Icon name="user" size={16} />
+            Sanatçı Sayfasını Aç
+          </button>
+        </div>
       </div>
     {/if}
 
@@ -1077,6 +1096,13 @@
   }
   .ab-subs {
     font-size: 12px;
+  }
+  .ab-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
   }
   .ab-btn {
     flex-shrink: 0;

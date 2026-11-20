@@ -63,7 +63,12 @@ class PlayerStore {
   openedArtist = $state<ArtistData | null>(null);
   loadingArtist = $state(false);
   artistError = $state<string | null>(null);
+  radioLoading = $state(false);
+  discoverLoading = $state(false);
+  toast = $state<{ message: string; id: number } | null>(null);
 
+  #toastTimer: ReturnType<typeof setTimeout> | null = null;
+  #toastSeq = 0;
   #lyricsCache = new Map<string, LyricsData | null>();
   #syncedAt = 0;
   #raf = 0;
@@ -199,9 +204,91 @@ class PlayerStore {
     }
     await invoke('player_set_output_device', { device: clean });
   };
+  showToast = (message: string) => {
+    if (this.#toastTimer) {
+      clearTimeout(this.#toastTimer);
+    }
+    this.#toastSeq += 1;
+    const id = this.#toastSeq;
+    this.toast = { message, id };
+    this.#toastTimer = setTimeout(() => {
+      if (this.toast?.id === id) {
+        this.toast = null;
+      }
+      this.#toastTimer = null;
+    }, 2800);
+  };
+
   search = (query: string) => invoke<Track[]>('yt_search', { query });
   searchPlaylists = (query: string) => invoke<PlaylistCard[]>('yt_search_playlists', { query });
-  startRadio = (track: Track) => invoke('player_start_radio', { track });
+  startRadio = async (track: Track) => {
+    await invoke('player_start_radio', { track });
+    this.showToast(`"${track.title}" radyosu başlatıldı`);
+  };
+  startArtistRadio = async (artistName: string, channelId?: string | null) => {
+    const clean = artistName.trim();
+    if (!clean || this.radioLoading) return;
+    this.radioLoading = true;
+    this.showToast(`${clean} sanatçı radyosu hazırlanıyor...`);
+    try {
+      const count = await invoke<number>('player_start_artist_radio', {
+        artistName: clean,
+        channelId: channelId ?? null
+      });
+      if (count > 0) {
+        this.showToast(`${clean} Radyosu başlatıldı (${count} benzersiz parça)`);
+      } else {
+        this.showToast(`${clean} için radyo parçası bulunamadı`);
+      }
+    } catch (e) {
+      this.showToast(`Sanatçı radyosu başlatılamadı: ${e}`);
+    } finally {
+      this.radioLoading = false;
+    }
+  };
+  playNext = async (track: Track) => {
+    await invoke('player_play_next', { track });
+    this.showToast(`"${track.title}" sıradaki olarak eklendi`);
+  };
+  removeFromQueue = (index: number) => invoke('player_remove_from_queue', { index });
+  clearUpcoming = async () => {
+    await invoke('player_clear_upcoming');
+    this.showToast('Sıradaki parçalar temizlendi');
+  };
+  shuffleUpcoming = async () => {
+    await invoke('player_shuffle_upcoming');
+    this.showToast('Sıradaki parçalar akıllıca karıştırıldı');
+  };
+  discoverMore = async () => {
+    if (this.discoverLoading) return;
+    this.discoverLoading = true;
+    try {
+      const added = await invoke<number>('player_discover_more');
+      if (added > 0) {
+        this.showToast(`${added} yeni benzer parça sıraya eklendi`);
+      } else {
+        this.showToast('Yeni benzersiz parça bulunamadı');
+      }
+    } catch {
+      this.showToast('Benzer parçalar alınamadı');
+    } finally {
+      this.discoverLoading = false;
+    }
+  };
+  startEndlessMix = async (tracks: Track[], source = 'Kesintisiz Keşfet') => {
+    if (tracks.length === 0) return;
+    if (!this.settings.autoplay) {
+      await this.updateSettings({ autoplay: true });
+    }
+    const copy = [...tracks];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    await this.playTrack(copy[0], copy, source);
+    await invoke('player_shuffle_upcoming');
+    this.showToast(`${source} başlatıldı · kesintisiz devam edecek`);
+  };
   radio = (videoId: string) => invoke<Track[]>('yt_radio', { videoId });
   moodCategories = () => invoke<MoodCategory[]>('yt_mood_categories');
   moodPlaylists = (params: string) => invoke<PlaylistCard[]>('yt_mood_playlists', { params });

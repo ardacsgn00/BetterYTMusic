@@ -57,6 +57,15 @@
         </button>
         <button
           class="btn now-action-btn"
+          disabled={player.radioLoading}
+          title="{track.artist} ve benzer sanatçılardan kesintisiz radyo başlat"
+          onclick={() => player.startArtistRadio(track.artist)}
+        >
+          <Icon name="sparkles" size={15} />
+          <span>Sanatçı Radyosu</span>
+        </button>
+        <button
+          class="btn now-action-btn"
           title="{track.artist} Sanatçı Sayfasını Aç"
           onclick={() => player.openArtist(track.artist)}
         >

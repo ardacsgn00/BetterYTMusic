@@ -8,7 +8,9 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use rodio::cpal::traits::{DeviceTrait, HostTrait};
+#[cfg(not(target_os = "android"))]
+use rodio::cpal::traits::DeviceTrait;
+use rodio::cpal::traits::HostTrait;
 use rodio::{OutputStream, Sink, Source};
 use symphonia::core::audio::{SampleBuffer, SignalSpec};
 use symphonia::core::codecs::{Decoder as SymDecoder, DecoderOptions, CODEC_TYPE_NULL};
@@ -22,6 +24,7 @@ use crate::innertube::Innertube;
 use crate::mock::Track;
 
 /// Enumerate all available audio output device names on the host OS.
+#[cfg(not(target_os = "android"))]
 pub fn list_output_devices() -> Vec<String> {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let host = rodio::cpal::default_host();
@@ -41,6 +44,48 @@ pub fn list_output_devices() -> Vec<String> {
     .unwrap_or_default()
 }
 
+/// Android outputs through the single system audio route via Oboe; skip CPAL's
+/// Java device enumeration to avoid `oboe-rs` JNI buffer crashes.
+#[cfg(target_os = "android")]
+pub fn list_output_devices() -> Vec<String> {
+    Vec::new()
+}
+
+#[cfg(target_os = "android")]
+fn open_output_stream(
+    _device_name: Option<&str>,
+) -> Option<(OutputStream, rodio::OutputStreamHandle)> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let host = rodio::cpal::default_host();
+        if let Some(device) = host.default_output_device() {
+            // Try explicit Oboe-compatible PCM configs so CPAL does not call
+            // `Device::default_output_config()` (which triggers 52 JNI queries).
+            let candidates = [
+                (48_000_u32, rodio::cpal::SampleFormat::F32, 2_u16),
+                (48_000_u32, rodio::cpal::SampleFormat::I16, 2_u16),
+                (44_100_u32, rodio::cpal::SampleFormat::F32, 2_u16),
+                (44_100_u32, rodio::cpal::SampleFormat::I16, 2_u16),
+                (48_000_u32, rodio::cpal::SampleFormat::I16, 1_u16),
+            ];
+            for (rate, fmt, ch) in candidates {
+                let cfg = rodio::cpal::SupportedStreamConfig::new(
+                    ch,
+                    rodio::cpal::SampleRate(rate),
+                    rodio::cpal::SupportedBufferSize::Unknown,
+                    fmt,
+                );
+                if let Ok(pair) = OutputStream::try_from_device_config(&device, cfg) {
+                    return Some(pair);
+                }
+            }
+        }
+        OutputStream::try_default().ok()
+    }))
+    .ok()
+    .flatten()
+}
+
+#[cfg(not(target_os = "android"))]
 fn open_output_stream(
     device_name: Option<&str>,
 ) -> Option<(OutputStream, rodio::OutputStreamHandle)> {
@@ -642,7 +687,7 @@ fn run_worker(
             current_bytes = Some(ready.audio.bytes.clone());
             current_loudness_db = ready.audio.loudness_db;
 
-            if stream_pair.is_none() {
+            if (desired_playing || !cfg!(target_os = "android")) && stream_pair.is_none() {
                 stream_pair = open_output_stream(None);
             }
 
@@ -728,7 +773,7 @@ fn run_worker(
                         }
                         current_bytes = Some(cached.bytes.clone());
                         current_loudness_db = cached.loudness_db;
-                        if stream_pair.is_none() {
+                        if (desired_playing || !cfg!(target_os = "android")) && stream_pair.is_none() {
                             stream_pair = open_output_stream(None);
                         }
                         if let Some((_, handle)) = &stream_pair {
@@ -791,7 +836,32 @@ fn run_worker(
                 }
                 EngineCmd::Play => {
                     desired_playing = true;
-                    if let Some(s) = &sink {
+                    if sink.is_none() {
+                        if let Some(bytes) = current_bytes.clone() {
+                            if stream_pair.is_none() {
+                                stream_pair = open_output_stream(None);
+                            }
+                            if let Some((_, handle)) = &stream_pair {
+                                let seek_pos = clock.base_ms.load(Ordering::Relaxed);
+                                let eff_vol = effective_volume(
+                                    user_volume,
+                                    current_loudness_db,
+                                    norm_enabled,
+                                );
+                                match build_sink_at(
+                                    handle,
+                                    bytes,
+                                    seek_pos,
+                                    eff_vol,
+                                    true,
+                                    &clock,
+                                ) {
+                                    Ok(new_sink) => sink = Some(new_sink),
+                                    Err(e) => eprintln!("[audio] play decode error: {e}"),
+                                }
+                            }
+                        }
+                    } else if let Some(s) = &sink {
                         s.play();
                     }
                 }
@@ -802,7 +872,7 @@ fn run_worker(
                     }
                 }
                 EngineCmd::Seek(pos_ms) => {
-                    if stream_pair.is_none() {
+                    if (desired_playing || !cfg!(target_os = "android")) && stream_pair.is_none() {
                         stream_pair = open_output_stream(None);
                     }
                     let dur = clock.duration_ms.load(Ordering::Relaxed);

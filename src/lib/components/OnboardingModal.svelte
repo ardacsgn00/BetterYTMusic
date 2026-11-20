@@ -8,7 +8,7 @@
     { id: 'modes', tabLabel: '4 Görünüm', icon: 'maximize' },
     { id: 'discovery', tabLabel: 'Akıllı Keşif', icon: 'radio' },
     { id: 'style', tabLabel: 'Kişiselleştirme', icon: 'palette' },
-    { id: 'start', tabLabel: 'Masaüstü & Başla', icon: 'user' }
+    { id: 'start', tabLabel: 'Platform & Başla', icon: 'user' }
   ];
 
   const QUICK_THEMES: { id: ThemeMode; label: string; bg: string; surface: string }[] = [
@@ -572,13 +572,13 @@
               </div>
               <div class="perk-box">
                 <Icon name="windows" size={16} />
-                <span><strong>Tepsi & Medya Tuşları</strong><small class="muted">Windows, macOS & Linux tam uyumu</small></span>
+                <span><strong>Tepsi & Medya Tuşları</strong><small class="muted">Windows, macOS, Linux & Android 11+</small></span>
               </div>
             </div>
           </div>
 
           <div class="copy-col">
-            <span class="eyebrow">05 · MASAÜSTÜ GÜCÜ & HEMEN BAŞLA</span>
+            <span class="eyebrow">05 · PLATFORM GÜCÜ & HEMEN BAŞLA</span>
             <h2 class="step-title">Kurulum Bitti, Müzik Seni Bekliyor!</h2>
             <p class="step-desc muted">
               Google hesabını bağlayıp kişisel Süpermix ve beğenilerine hemen ulaşabilir ya da hesap açmadan arama ve radyoyla doğrudan başlayabilirsin.
@@ -1757,10 +1757,14 @@
 
     .guide-card {
       width: 100%;
+      height: 100vh;
       height: 100dvh;
+      max-height: 100vh;
       max-height: 100dvh;
       border-radius: 0;
       border: none !important;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     .step-nav {

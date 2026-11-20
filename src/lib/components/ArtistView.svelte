@@ -24,9 +24,7 @@
   }
 
   function startArtistRadio() {
-    if (artist.topTracks.length > 0) {
-      player.startRadio(artist.topTracks[0]);
-    }
+    player.startArtistRadio(artist.name, artist.channelId);
   }
 </script>
 
@@ -73,12 +71,12 @@
         </button>
         <button
           class="btn hero-btn"
-          disabled={artist.topTracks.length === 0}
-          title="Sanatçı Radyosunu Başlat"
+          disabled={player.radioLoading}
+          title="Sanatçı ve benzer sanatçılardan kesintisiz radyo başlat"
           onclick={startArtistRadio}
         >
           <Icon name="radio" size={16} />
-          Sanatçı Radyosu
+          {player.radioLoading ? 'Hazırlanıyor...' : 'Sanatçı Radyosu'}
         </button>
       </div>
     </div>
@@ -122,6 +120,15 @@
                   <span class="t-sub truncate muted">{track.artist}{track.album ? ` · ${track.album}` : ''}</span>
                 </span>
                 <span class="t-dur muted">{track.durationMs ? formatTime(track.durationMs) : ''}</span>
+              </button>
+
+              <button
+                class="btn ghost icon radio-btn"
+                title="Sıradaki Olarak Çal"
+                aria-label="Sıradaki Olarak Çal"
+                onclick={() => player.playNext(track)}
+              >
+                <Icon name="list-plus" size={16} />
               </button>
 
               <button

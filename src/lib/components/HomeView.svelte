@@ -81,6 +81,31 @@
   const quickPicks = $derived(tracks.slice(0, 8));
   const shelfTracks = $derived(tracks.length > 8 ? tracks.slice(8) : tracks);
 
+  /** Unique artists extracted from now-playing, discovery feed, and favorites for 1-click Artist Radio. */
+  const radioArtists = $derived.by(() => {
+    const seen = new Set<string>();
+    const out: { name: string; color: string; thumb: string | null }[] = [];
+    const pool: Track[] = [
+      ...(player.state.track ? [player.state.track] : []),
+      ...tracks,
+      ...library.favorites.slice(0, 12)
+    ];
+    for (const t of pool) {
+      const raw = (t.artist || '')
+        .replace(/\s*-\s*Topic$/i, '')
+        .split(/[&,•;]/)[0]
+        ?.split(/\s+feat\.?/i)[0]
+        ?.trim();
+      if (!raw || raw.length < 2 || raw.toLowerCase() === 'youtube music') continue;
+      const key = raw.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name: raw, color: t.color, thumb: t.thumbnail });
+      if (out.length >= 12) break;
+    }
+    return out;
+  });
+
   async function loadHome() {
     loading = true;
     error = null;
@@ -165,12 +190,7 @@
 
   function playShuffled() {
     if (tracks.length === 0) return;
-    const copy = [...tracks];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    player.playTrack(copy[0], copy, 'Ana Sayfa Karışık');
+    player.startEndlessMix(tracks, 'Kesintisiz Keşfet');
   }
 
   onMount(loadHome);
@@ -287,6 +307,14 @@
               </div>
               <button
                 class="btn ghost icon pl-radio"
+                title="Sıradaki Olarak Çal"
+                aria-label="Sıradaki Olarak Çal"
+                onclick={() => player.playNext(track)}
+              >
+                <Icon name="list-plus" size={16} />
+              </button>
+              <button
+                class="btn ghost icon pl-radio"
                 title="Şarkı Radyosu Başlat"
                 aria-label="Şarkı Radyosu Başlat"
                 onclick={() => player.startRadio(track)}
@@ -369,9 +397,13 @@
         </div>
 
         {#if tracks.length > 0}
-          <button class="btn accent" onclick={playShuffled}>
+          <button
+            class="btn accent"
+            title="Tekrarsız ve sanatçı dengeli kesintisiz karışık keşfet akışı başlat"
+            onclick={playShuffled}
+          >
             <Icon name="shuffle" size={17} />
-            Karışık Çal
+            Kesintisiz Karışık
           </button>
         {/if}
         <button class="btn" onclick={loadHome} disabled={loading}>
@@ -513,6 +545,15 @@
                         <button
                           type="button"
                           class="btn ghost icon sm"
+                          title="Sıradaki Olarak Çal"
+                          aria-label="Sıradaki Olarak Çal"
+                          onclick={() => player.playNext(track)}
+                        >
+                          <Icon name="list-plus" size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          class="btn ghost icon sm"
                           title="Şarkı Radyosu Başlat"
                           aria-label="Şarkı Radyosu Başlat"
                           onclick={() => player.startRadio(track)}
@@ -579,6 +620,45 @@
           {/if}
         </section>
       {/if}
+    {/if}
+
+    {#if radioArtists.length > 0 && !loading}
+      <div class="artist-radio-bar">
+        <div class="mood-bar-title muted">
+          <Icon name="radio" size={14} />
+          <span>Hızlı Sanatçı Radyoları · Tekrarsız & Kesintisiz</span>
+        </div>
+        <div
+          class="mood-scroll"
+          onwheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.preventDefault();
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+        >
+          {#each radioArtists as ar (ar.name)}
+            {@const isPlayingAr = player.state.sourceName === `Sanatçı Radyosu: ${ar.name}`}
+            <button
+              type="button"
+              class="artist-radio-chip"
+              class:active={isPlayingAr}
+              disabled={player.radioLoading}
+              title="{ar.name} ve benzer sanatçılardan kesintisiz radyo başlat"
+              onclick={() => player.startArtistRadio(ar.name)}
+            >
+              <span class="ar-dot" style:background-color={ar.color}>
+                {#if ar.thumb}
+                  <img src={ar.thumb} alt="" loading="lazy" draggable="false" />
+                {:else}
+                  <Icon name="radio" size={12} />
+                {/if}
+              </span>
+              <span class="ar-name">{ar.name}</span>
+            </button>
+          {/each}
+        </div>
+      </div>
     {/if}
 
     {#if moodCategories.length > 0}
@@ -808,6 +888,14 @@
                     {track.durationMs ? formatTime(track.durationMs) : ''}
                   </span>
                 </div>
+                <button
+                  class="btn ghost icon q-radio"
+                  title="Sıradaki Olarak Çal"
+                  aria-label="Sıradaki Olarak Çal"
+                  onclick={() => player.playNext(track)}
+                >
+                  <Icon name="list-plus" size={16} />
+                </button>
                 <button
                   class="btn ghost icon q-radio"
                   title="Şarkı Radyosu Başlat"
@@ -1860,5 +1948,70 @@
     .hs-pl-grid {
       grid-template-columns: 1fr;
     }
+  }
+
+  /* Quick Artist Radio Bar */
+  .artist-radio-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .artist-radio-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    height: 38px;
+    padding: 4px 12px 4px 5px;
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 var(--edge-depth) 0 var(--edge);
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease,
+      transform 70ms ease;
+  }
+  .artist-radio-chip:hover {
+    border-color: var(--accent);
+    background: var(--surface-2);
+  }
+  .artist-radio-chip:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--edge);
+  }
+  .artist-radio-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+    box-shadow: 0 var(--edge-depth) 0 var(--accent-edge);
+  }
+  .artist-radio-chip:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+  .ar-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border: 1.5px solid var(--border);
+    color: #fff;
+  }
+  .ar-dot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .ar-name {
+    white-space: nowrap;
   }
 </style>

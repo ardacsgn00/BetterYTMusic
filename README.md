@@ -4,11 +4,11 @@
 
 # BetterYTMusic
 
-**Hafif, hızlı ve kişiselleştirilebilir masaüstü YouTube Music istemcisi**  
-*Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows, macOS & Linux*
+**Hafif, hızlı ve kişiselleştirilebilir YouTube Music istemcisi**  
+*Tauri 2 · Rust (`rodio` + `symphonia`) · Svelte 5 · Innertube API · Windows, macOS, Linux & Android 11+*
 
-[![Version](https://img.shields.io/badge/version-v0.34.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Version](https://img.shields.io/badge/version-v0.36.0-ff4e45?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android_11%2B-3a86ff?style=for-the-badge)](https://github.com/ardacsgn00/betterytmusic)
 [![Built with Tauri](https://img.shields.io/badge/Tauri_2-Rust_%2B_Svelte_5-06d6a0?style=for-the-badge)](https://tauri.app)
 [![Developer](https://img.shields.io/badge/Geli%C5%9Ftirici-Arda_Co%C5%9Fgun-8338ec?style=for-the-badge)](https://github.com/ardacsgn00)
 

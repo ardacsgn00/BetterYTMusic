@@ -304,6 +304,13 @@
   {#if player.onboardingOpen}
     <OnboardingModal />
   {/if}
+
+  {#if player.toast}
+    <div class="toast-pill" role="status" aria-live="polite">
+      <Icon name="sparkles" size={15} />
+      <span>{player.toast.message}</span>
+    </div>
+  {/if}
 </div>
 {/if}
 
@@ -488,6 +495,43 @@
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.02em;
+    }
+    .toast-pill {
+      bottom: calc(136px + env(safe-area-inset-bottom, 0px));
+      right: 12px;
+      left: 12px;
+      justify-content: center;
+    }
+  }
+
+  .toast-pill {
+    position: fixed;
+    right: 22px;
+    bottom: 102px;
+    z-index: 260;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    border: 2px solid var(--accent);
+    box-shadow: 0 var(--edge-depth) 0 var(--accent-edge);
+    font-size: 13px;
+    font-weight: 700;
+    pointer-events: none;
+    animation: toastIn 160ms ease-out;
+  }
+
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 </style>

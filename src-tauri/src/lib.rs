@@ -14,9 +14,18 @@ use std::sync::Arc;
 use innertube::Innertube;
 use player::PlayerController;
 use settings::SettingsManager;
-use tauri::{Manager, WindowEvent};
+use tauri::Manager;
+#[cfg(desktop)]
+use tauri::WindowEvent;
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    std::panic::set_hook(Box::new(|info| {
+        let bt = std::backtrace::Backtrace::force_capture();
+        eprintln!("[panic] {info}\n{bt}");
+    }));
+
+    #[cfg(desktop)]
     if !taskbar::acquire_single_instance() {
         return;
     }
@@ -74,18 +83,22 @@ pub fn run() {
                 });
             }
 
-            // Only show the main window if not started with `--minimized`.
-            let start_hidden = std::env::args().any(|a| a == "--minimized");
-            if !start_hidden {
-                tray::show_main_window(&handle);
+            #[cfg(desktop)]
+            {
+                // Only show the main window if not started with `--minimized`.
+                let start_hidden = std::env::args().any(|a| a == "--minimized");
+                if !start_hidden {
+                    tray::show_main_window(&handle);
+                }
+                let tb = taskbar::init(&handle);
+                app.state::<PlayerController>().attach_taskbar(tb);
             }
-            let tb = taskbar::init(&handle);
-            app.state::<PlayerController>().attach_taskbar(tb);
             app.state::<PlayerController>().broadcast(&handle);
             Ok(())
         })
         .on_window_event(|_window, _event| {
             // Closing the window either hides to the tray or exits, based on settings.
+            #[cfg(desktop)]
             if let WindowEvent::CloseRequested { api, .. } = _event {
                 if _window.label() == "main" {
                     if let Some(ctrl) = _window.app_handle().try_state::<PlayerController>() {
@@ -121,6 +134,12 @@ pub fn run() {
             commands::player_toggle_shuffle,
             commands::player_play_track,
             commands::player_start_radio,
+            commands::player_start_artist_radio,
+            commands::player_play_next,
+            commands::player_remove_from_queue,
+            commands::player_clear_upcoming,
+            commands::player_shuffle_upcoming,
+            commands::player_discover_more,
             commands::player_append_queue,
             commands::yt_search,
             commands::yt_search_playlists,

@@ -5,6 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>BetterYTMusic</title>
     <script>
+      // WebView 80+ / Android 11 Chromium 83 compatibility polyfills before module evaluation.
+      try {
+        if (!Object.hasOwn) {
+          Object.hasOwn = function (o, k) {
+            return o != null && Object.prototype.hasOwnProperty.call(o, k);
+          };
+        }
+        if (!String.prototype.replaceAll) {
+          String.prototype.replaceAll = function (s, r) {
+            if (s instanceof RegExp) {
+              if (!s.global) throw new TypeError('replaceAll must be called with a global RegExp');
+              return this.replace(s, r);
+            }
+            return this.replace(new RegExp(String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), r);
+          };
+        }
+        if (!Array.prototype.at) {
+          Array.prototype.at = function (n) {
+            n = Math.trunc(n) || 0;
+            if (n < 0) n += this.length;
+            return n < 0 || n >= this.length ? undefined : this[n];
+          };
+        }
+        if (!String.prototype.at) {
+          String.prototype.at = function (n) {
+            n = Math.trunc(n) || 0;
+            if (n < 0) n += this.length;
+            return n < 0 || n >= this.length ? undefined : this.charAt(n);
+          };
+        }
+        if (!Array.prototype.findLast) {
+          Array.prototype.findLast = function (fn, thisArg) {
+            for (var i = this.length - 1; i >= 0; i--) {
+              if (fn.call(thisArg, this[i], i, this)) return this[i];
+            }
+          };
+        }
+        if (!Array.prototype.findLastIndex) {
+          Array.prototype.findLastIndex = function (fn, thisArg) {
+            for (var i = this.length - 1; i >= 0; i--) {
+              if (fn.call(thisArg, this[i], i, this)) return i;
+            }
+            return -1;
+          };
+        }
+        if (!Promise.any) {
+          Promise.any = function (ps) {
+            return new Promise(function (res, rej) {
+              var arr = Array.from(ps), n = arr.length, errs = [];
+              if (!n) return rej(new Error('All promises were rejected'));
+              arr.forEach(function (p, i) {
+                Promise.resolve(p).then(res, function (e) {
+                  errs[i] = e;
+                  if (!--n) rej(errs);
+                });
+              });
+            });
+          };
+        }
+        if (typeof crypto !== 'undefined' && !crypto.randomUUID) {
+          crypto.randomUUID = function () {
+            var b = new Uint8Array(16);
+            crypto.getRandomValues(b);
+            b[6] = (b[6] & 0x0f) | 0x40;
+            b[8] = (b[8] & 0x3f) | 0x80;
+            return Array.from(b, function (v, i) {
+              return (i === 4 || i === 6 || i === 8 || i === 10 ? '-' : '') + v.toString(16).padStart(2, '0');
+            }).join('');
+          };
+        }
+        if (typeof structuredClone !== 'function') {
+          globalThis.structuredClone = function (v) {
+            return v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+          };
+        }
+      } catch (e) {}
+
       // Apply saved theme before first paint to avoid a light/dark flash.
       try {
         const t = JSON.parse(localStorage.getItem('bytm.theme') || '{}');

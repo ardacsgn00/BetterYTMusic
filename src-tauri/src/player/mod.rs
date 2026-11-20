@@ -1,7 +1,9 @@
+pub mod dedup;
 pub mod engine;
 pub mod session;
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -15,6 +17,9 @@ use crate::mock::Track;
 use crate::taskbar::TaskbarHandle;
 use engine::{AudioEngine, RodioEngine};
 use session::{load_session, save_session, SavedSession};
+
+/// Maximum number of recently played tracks remembered to prevent repeats during endless radio.
+const MAX_RECENT_HISTORY: usize = 120;
 
 /// Event emitted to the frontend whenever player state changes.
 pub const STATE_EVENT: &str = "player:state";
@@ -57,6 +62,7 @@ pub struct Player {
     shuffle: bool,
     source_name: Option<String>,
     output_device: Option<String>,
+    recent_history: Vec<Track>,
 }
 
 impl Player {
@@ -70,12 +76,28 @@ impl Player {
             shuffle: false,
             source_name: None,
             output_device: None,
+            recent_history: Vec::new(),
         };
         p.engine.set_volume(p.volume);
         if !p.queue.is_empty() {
             p.load(0, false);
         }
         p
+    }
+
+    fn record_history(&mut self, track: &Track) {
+        if self
+            .recent_history
+            .iter()
+            .any(|h| dedup::are_tracks_duplicate(h, track))
+        {
+            return;
+        }
+        self.recent_history.push(track.clone());
+        if self.recent_history.len() > MAX_RECENT_HISTORY {
+            let excess = self.recent_history.len() - MAX_RECENT_HISTORY;
+            self.recent_history.drain(0..excess);
+        }
     }
 
     pub fn current(&self) -> Option<&Track> {
@@ -103,10 +125,13 @@ impl Player {
     }
 
     fn load(&mut self, index: usize, autoplay: bool) {
-        let Some(track) = self.queue.get(index) else { return };
-        self.engine.load(track);
+        let Some(track) = self.queue.get(index).cloned() else {
+            return;
+        };
+        self.engine.load(&track);
         self.index = Some(index);
         if autoplay {
+            self.record_history(&track);
             self.engine.play();
             self.trigger_prefetch();
         }
@@ -171,11 +196,17 @@ impl Player {
         start_index: usize,
         source_name: Option<String>,
     ) {
-        self.queue = queue;
+        let target_id = queue.get(start_index).map(|t| t.id.clone());
+        let deduped = dedup::dedup_tracks(queue, &[]);
+        let resolved_idx = target_id
+            .as_deref()
+            .and_then(|id| deduped.iter().position(|t| t.id == id))
+            .unwrap_or_else(|| start_index.min(deduped.len().saturating_sub(1)));
+
+        self.queue = deduped;
         self.source_name = source_name;
         if !self.queue.is_empty() {
-            let idx = start_index.min(self.queue.len() - 1);
-            self.load(idx, true);
+            self.load(resolved_idx, true);
         } else {
             self.index = None;
             self.engine.pause();
@@ -190,15 +221,123 @@ impl Player {
         }
     }
 
-    pub fn append_unique(&mut self, tracks: Vec<Track>) {
-        let mut added = false;
-        for t in tracks {
-            if !self.queue.iter().any(|x| x.id == t.id) {
-                self.queue.push(t);
-                added = true;
+    /// Append tracks to the queue while filtering out exact AND canonical duplicates
+    /// (same song from different YouTube channels/uploaders) as well as tracks already
+    /// played in this session. Spaces out consecutive same-artist tracks for better flow.
+    /// Returns the number of newly added tracks.
+    pub fn append_unique(&mut self, tracks: Vec<Track>) -> usize {
+        if tracks.is_empty() {
+            return 0;
+        }
+        let mut seen: Vec<Track> = Vec::with_capacity(self.queue.len() + self.recent_history.len());
+        seen.extend(self.queue.iter().cloned());
+        seen.extend(self.recent_history.iter().cloned());
+
+        let mut fresh = dedup::dedup_tracks(tracks, &seen);
+        if fresh.is_empty() {
+            return 0;
+        }
+
+        let last_artist = self.queue.last().map(|t| t.artist.clone());
+        if self.shuffle {
+            dedup::smart_shuffle(&mut fresh, last_artist.as_deref());
+        } else {
+            fresh = dedup::interleave_by_artist(fresh, last_artist.as_deref());
+        }
+
+        let added = fresh.len();
+        self.queue.extend(fresh);
+        if added > 0 && self.engine.is_playing() {
+            self.trigger_prefetch();
+        }
+        added
+    }
+
+    /// Insert a track right after the currently playing track.
+    /// If an equivalent track is already queued later, move it up instead of duplicating.
+    pub fn play_next(&mut self, track: Track) {
+        let Some(cur_idx) = self.index else {
+            self.set_queue(vec![track], 0, None);
+            return;
+        };
+        // If already the current track, ignore.
+        if self
+            .queue
+            .get(cur_idx)
+            .map(|c| dedup::are_tracks_duplicate(c, &track))
+            .unwrap_or(false)
+        {
+            return;
+        }
+        // Remove any existing upcoming duplicate so we move it cleanly.
+        if cur_idx + 1 < self.queue.len() {
+            let mut i = cur_idx + 1;
+            while i < self.queue.len() {
+                if dedup::are_tracks_duplicate(&self.queue[i], &track) {
+                    self.queue.remove(i);
+                } else {
+                    i += 1;
+                }
             }
         }
-        if added && self.engine.is_playing() {
+        let insert_at = (cur_idx + 1).min(self.queue.len());
+        self.queue.insert(insert_at, track);
+        if self.engine.is_playing() {
+            self.trigger_prefetch();
+        }
+    }
+
+    /// Remove a track from the queue by index.
+    pub fn remove_from_queue(&mut self, index: usize) {
+        if index >= self.queue.len() {
+            return;
+        }
+        let was_playing = self.engine.is_playing();
+        self.queue.remove(index);
+        match self.index {
+            Some(cur) if index < cur => {
+                self.index = Some(cur - 1);
+            }
+            Some(cur) if index == cur => {
+                if self.queue.is_empty() {
+                    self.index = None;
+                    self.engine.pause();
+                } else {
+                    let next_idx = cur.min(self.queue.len() - 1);
+                    self.load(next_idx, was_playing);
+                }
+            }
+            _ => {}
+        }
+        if self.engine.is_playing() {
+            self.trigger_prefetch();
+        }
+    }
+
+    /// Clear all upcoming tracks after the currently playing track.
+    pub fn clear_upcoming(&mut self) {
+        if let Some(cur) = self.index {
+            if cur + 1 < self.queue.len() {
+                self.queue.truncate(cur + 1);
+            }
+        }
+    }
+
+    /// Deduplicate and smart-shuffle all upcoming tracks after the current track.
+    pub fn shuffle_upcoming(&mut self) {
+        let Some(cur) = self.index else {
+            return;
+        };
+        if cur + 2 >= self.queue.len() {
+            return;
+        }
+        let cur_artist = self.queue.get(cur).map(|t| t.artist.clone());
+        let existing_prefix: Vec<Track> = self.queue[..=cur].to_vec();
+        let upcoming: Vec<Track> = self.queue.drain(cur + 1..).collect();
+        let mut deduped = dedup::dedup_tracks(upcoming, &existing_prefix);
+        dedup::smart_shuffle(&mut deduped, cur_artist.as_deref());
+        self.queue.extend(deduped);
+        if self.engine.is_playing() {
             self.trigger_prefetch();
         }
     }
@@ -238,25 +377,21 @@ impl Player {
     pub fn toggle_shuffle(&mut self) {
         self.shuffle = !self.shuffle;
         if self.shuffle && self.queue.len() > 2 {
-            // Keep the currently playing track at index 0 and shuffle the remaining tracks.
+            // Keep the currently playing track at index 0 and smart-shuffle the remaining tracks
+            // (deduplicated & artist-spaced so the same artist doesn't repeat back-to-back).
             if let Some(cur_idx) = self.index {
                 if cur_idx < self.queue.len() {
                     self.queue.swap(0, cur_idx);
                     self.index = Some(0);
                 }
             }
-            let mut seed = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_nanos() as u64)
-                .unwrap_or(0x9E37_79B9_7F4A_7C15);
             let start = if self.index.is_some() { 1 } else { 0 };
-            for i in (start + 1..self.queue.len()).rev() {
-                seed ^= seed << 13;
-                seed ^= seed >> 7;
-                seed ^= seed << 17;
-                let j = start + (seed as usize % (i - start + 1));
-                self.queue.swap(i, j);
-            }
+            let cur_artist = self.queue.first().map(|t| t.artist.clone());
+            let prefix: Vec<Track> = self.queue[..start].to_vec();
+            let rest: Vec<Track> = self.queue.drain(start..).collect();
+            let mut deduped = dedup::dedup_tracks(rest, &prefix);
+            dedup::smart_shuffle(&mut deduped, cur_artist.as_deref());
+            self.queue.extend(deduped);
         }
         if self.engine.is_playing() {
             self.trigger_prefetch();
@@ -328,6 +463,7 @@ pub struct PlayerController {
     taskbar: Mutex<Option<TaskbarHandle>>,
     last_track_id: Mutex<Option<String>>,
     last_autoplay_id: Mutex<Option<String>>,
+    autoplay_in_flight: Arc<AtomicBool>,
     session_path: Mutex<Option<PathBuf>>,
     last_session_save: Mutex<Instant>,
 }
@@ -346,6 +482,7 @@ impl PlayerController {
             taskbar: Mutex::new(None),
             last_track_id: Mutex::new(None),
             last_autoplay_id: Mutex::new(None),
+            autoplay_in_flight: Arc::new(AtomicBool::new(false)),
             session_path: Mutex::new(None),
             last_session_save: Mutex::new(Instant::now()),
         }
@@ -476,13 +613,13 @@ impl PlayerController {
 
     /// Detects natural end-of-track and advances the queue, and updates duration if newly decoded.
     fn tick(&self, app: &AppHandle) {
-        let (ended, dur_changed, is_playing, needs_autoplay_id) = {
+        let (ended, dur_changed, is_playing, autoplay_seed) = {
             let mut p = lock(&self.player);
             let is_playing = p.engine.is_playing();
             let ended = is_playing && p.engine.is_finished();
             let eng_dur = p.engine.duration_ms();
             let mut dur_changed = false;
-            let mut needs_autoplay_id = None;
+            let mut autoplay_seed: Option<(String, String, Option<String>)> = None;
             if let Some(idx) = p.index {
                 if let Some(t) = p.queue.get_mut(idx) {
                     if eng_dur > 0 && t.duration_ms != eng_dur {
@@ -490,33 +627,80 @@ impl PlayerController {
                         dur_changed = true;
                     }
                 }
-                // Proactively trigger autoplay when on the last track of queue
-                if p.repeat == RepeatMode::Off && idx + 1 >= p.queue.len() && (ended || is_playing) {
-                    needs_autoplay_id = Some(p.queue[idx].id.clone());
+                // Proactively trigger autoplay when <= 3 tracks remain in the queue
+                // so endless listening stays truly seamless and gapless.
+                let remaining = p.queue.len().saturating_sub(idx + 1);
+                if p.repeat == RepeatMode::Off && remaining <= 2 && (ended || is_playing) {
+                    let seed_track = p.queue.last().unwrap_or(&p.queue[idx]);
+                    let alt_seed_id = if idx > 0 {
+                        p.queue.get(idx.saturating_sub(1)).map(|t| t.id.clone())
+                    } else {
+                        None
+                    };
+                    if !seed_track.id.starts_with("mock-") {
+                        autoplay_seed = Some((
+                            seed_track.id.clone(),
+                            seed_track.artist.clone(),
+                            alt_seed_id,
+                        ));
+                    }
                 }
             }
-            (ended, dur_changed, is_playing, needs_autoplay_id)
+            (ended, dur_changed, is_playing, autoplay_seed)
         };
 
-        if let Some(vid) = needs_autoplay_id {
+        if let Some((vid, artist, alt_vid)) = autoplay_seed {
             let autoplay = app
                 .try_state::<Arc<crate::settings::SettingsManager>>()
                 .map(|s| s.get().autoplay)
                 .unwrap_or(true);
 
-            if autoplay {
-                let mut last_ap = lock(&self.last_autoplay_id);
-                if *last_ap != Some(vid.clone()) {
-                    *last_ap = Some(vid.clone());
+            if autoplay && !self.autoplay_in_flight.load(Ordering::Acquire) {
+                let should_fetch = {
+                    let mut last_ap = lock(&self.last_autoplay_id);
+                    if *last_ap != Some(vid.clone()) {
+                        *last_ap = Some(vid.clone());
+                        true
+                    } else {
+                        false
+                    }
+                };
+                if should_fetch {
+                    self.autoplay_in_flight.store(true, Ordering::Release);
+                    let in_flight = self.autoplay_in_flight.clone();
                     let yt = self.innertube.clone();
                     let app_clone = app.clone();
-                    tauri::async_runtime::spawn(async move {
-                        if let Ok(radio) = yt.radio_queue(&vid) {
-                            let ctrl = app_clone.state::<PlayerController>();
-                            ctrl.with(&app_clone, |p| {
-                                p.append_unique(radio);
-                            });
+                    tauri::async_runtime::spawn_blocking(move || {
+                        let mut pool = yt.radio_queue(&vid).unwrap_or_default();
+                        let ctrl = app_clone.state::<PlayerController>();
+                        let mut added = ctrl.with(&app_clone, |p| p.append_unique(pool.clone()));
+
+                        // If primary radio overlapped heavily with already-played songs,
+                        // pull fresh tracks from an alternate seed or artist radio so endless
+                        // playback never stalls or repeats.
+                        if added < 3 {
+                            pool.clear();
+                            if let Some(alt) = alt_vid {
+                                if let Ok(r) = yt.radio_queue(&alt) {
+                                    pool.extend(r);
+                                }
+                            }
+                            if pool.len() < 6 && !artist.is_empty() {
+                                if let Ok(ar) = yt.artist_radio(&artist, None) {
+                                    pool.extend(ar);
+                                }
+                            }
+                            if !pool.is_empty() {
+                                added += ctrl.with(&app_clone, |p| p.append_unique(pool));
+                            }
                         }
+
+                        // If we still couldn't add tracks, clear last_autoplay_id so a future
+                        // track can retry cleanly.
+                        if added == 0 {
+                            *lock(&ctrl.last_autoplay_id) = None;
+                        }
+                        in_flight.store(false, Ordering::Release);
                     });
                 }
             }

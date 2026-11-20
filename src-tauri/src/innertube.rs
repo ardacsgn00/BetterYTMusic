@@ -477,14 +477,10 @@ impl Innertube {
 
         if out.len() < 6 {
             if let Ok(extra) = self.search("Top Hits") {
-                for t in extra {
-                    if !out.iter().any(|x| x.id == t.id) {
-                        out.push(t);
-                    }
-                }
+                out.extend(extra);
             }
         }
-        Ok(out)
+        Ok(crate::player::dedup::dedup_tracks(out, &[]))
     }
 
     /// Fetch the automatic "Up Next" radio queue (`RDAMVM<videoId>`) for a video.
@@ -507,7 +503,118 @@ impl Innertube {
 
         let mut out = Vec::new();
         collect_playlist_panel_items(&val, &mut out);
-        Ok(out)
+        Ok(crate::player::dedup::dedup_tracks(out, &[]))
+    }
+
+    /// Build a rich, deduplicated, artist-spaced Artist Radio mix combining the artist's
+    /// top tracks, radio recommendations, and similar artists.
+    pub fn artist_radio(
+        &self,
+        artist_name: &str,
+        channel_id: Option<&str>,
+    ) -> Result<Vec<Track>, String> {
+        let clean_name = clean_artist_name(artist_name);
+        let query_name = if clean_name.is_empty() {
+            artist_name.trim().to_string()
+        } else {
+            clean_name
+        };
+
+        let resolved_channel = channel_id
+            .map(str::trim)
+            .filter(|s| s.starts_with("UC"))
+            .map(String::from)
+            .or_else(|| {
+                self.search_artist(&query_name)
+                    .ok()
+                    .flatten()
+                    .map(|a| a.channel_id)
+            });
+
+        let mut pool: Vec<Track> = Vec::new();
+        let mut seed_ids: Vec<String> = Vec::new();
+
+        if let Some(cid) = resolved_channel {
+            if let Ok(details) = self.artist_details(&cid) {
+                for t in details.top_tracks.iter().take(2) {
+                    seed_ids.push(t.id.clone());
+                }
+                // Take up to 8 top tracks from the artist itself
+                pool.extend(details.top_tracks.into_iter().take(8));
+
+                // Pull a few tracks from similar artists for genuine radio discovery
+                for sim in details.similar_artists.into_iter().take(2) {
+                    if let Ok(sim_details) = self.artist_details(&sim.channel_id) {
+                        pool.extend(sim_details.top_tracks.into_iter().take(3));
+                    }
+                }
+            }
+        }
+
+        // Fallback if artist profile wasn't found or had no tracks
+        if pool.is_empty() && !query_name.is_empty() {
+            if let Ok(found) = self.search(&query_name) {
+                if let Some(first) = found.first() {
+                    seed_ids.push(first.id.clone());
+                }
+                pool.extend(found.into_iter().take(10));
+            }
+        }
+
+        // Expand with YouTube Music's radio queues from up to 2 seed tracks
+        for vid in seed_ids.into_iter().take(2) {
+            if let Ok(radio) = self.radio_queue(&vid) {
+                pool.extend(radio);
+            }
+        }
+
+        if pool.is_empty() {
+            return Err(format!("'{artist_name}' için sanatçı radyosu oluşturulamadı"));
+        }
+
+        let mut deduped = crate::player::dedup::dedup_tracks(pool, &[]);
+        // Keep a healthy balance so no single artist floods the whole list, while still
+        // letting the target artist shine.
+        let target_norm = crate::player::dedup::normalize_artist(&query_name);
+        let mut target_tracks = Vec::new();
+        let mut other_tracks = Vec::new();
+        for t in deduped.drain(..) {
+            let norm = crate::player::dedup::normalize_artist(&t.artist);
+            if !target_norm.is_empty() && (norm == target_norm || norm.contains(&target_norm)) {
+                target_tracks.push(t);
+            } else {
+                other_tracks.push(t);
+            }
+        }
+
+        crate::player::dedup::smart_shuffle(&mut target_tracks, None);
+        let mut other_capped = crate::player::dedup::cap_artist_frequency(other_tracks, 3);
+        crate::player::dedup::smart_shuffle(&mut other_capped, None);
+
+        // Interleave: start with the target artist, then alternate 1 target / 1-2 related
+        let mut mixed = Vec::with_capacity(target_tracks.len() + other_capped.len());
+        let mut t_iter = target_tracks.into_iter();
+        let mut o_iter = other_capped.into_iter();
+        loop {
+            let mut progressed = false;
+            if let Some(t) = t_iter.next() {
+                mixed.push(t);
+                progressed = true;
+            }
+            if let Some(o1) = o_iter.next() {
+                mixed.push(o1);
+                progressed = true;
+            }
+            if let Some(o2) = o_iter.next() {
+                mixed.push(o2);
+                progressed = true;
+            }
+            if !progressed {
+                break;
+            }
+        }
+
+        Ok(crate::player::dedup::dedup_tracks(mixed, &[]))
     }
 
     /// Fetch the signed-in user's Liked Music (`FEmusic_liked_videos`) from YouTube Music.
@@ -974,7 +1081,11 @@ impl Innertube {
             }
         }
 
-        Ok(out)
+        if is_radio_mix {
+            Ok(crate::player::dedup::dedup_tracks(out, &[]))
+        } else {
+            Ok(out)
+        }
     }
 
     /// Resolve a playable audio stream URL (`audio/mp4` AAC preferred for Symphonia).

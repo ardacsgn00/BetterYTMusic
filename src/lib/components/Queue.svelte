@@ -66,19 +66,56 @@
       </div>
     {/if}
 
-    {#if ontogglecolumns}
-      <button
-        type="button"
-        class="btn icon col-btn"
-        class:accent={threeCol}
-        title={threeCol ? 'Sekmeli görünüme dön (2 sütun)' : 'Şarkı sözlerini ve kuyruğu yan yana aç (3 sütun)'}
-        aria-label="3 sütun görünümü"
-        aria-pressed={threeCol}
-        onclick={ontogglecolumns}
-      >
-        <Icon name="columns" size={17} />
-      </button>
-    {/if}
+    <div class="q-head-actions">
+      {#if queue.length > 0}
+        <button
+          type="button"
+          class="btn ghost icon q-act-btn"
+          disabled={player.discoverLoading}
+          title="Çalan şarkıya benzer yeni parçalar ekle (tekrarsız)"
+          aria-label="Benzer parçalar ekle"
+          onclick={() => player.discoverMore()}
+        >
+          <Icon name="sparkles" size={16} />
+        </button>
+        {#if current !== null && current + 2 < queue.length}
+          <button
+            type="button"
+            class="btn ghost icon q-act-btn"
+            title="Sıradaki parçaları akıllıca karıştır (aynı sanatçıyı arka arkaya koymaz)"
+            aria-label="Sıradakileri akıllı karıştır"
+            onclick={() => player.shuffleUpcoming()}
+          >
+            <Icon name="shuffle" size={16} />
+          </button>
+        {/if}
+        {#if current !== null && current + 1 < queue.length}
+          <button
+            type="button"
+            class="btn ghost icon q-act-btn"
+            title="Sıradaki parçaları temizle"
+            aria-label="Sıradakileri temizle"
+            onclick={() => player.clearUpcoming()}
+          >
+            <Icon name="trash" size={15} />
+          </button>
+        {/if}
+      {/if}
+
+      {#if ontogglecolumns}
+        <button
+          type="button"
+          class="btn icon col-btn"
+          class:accent={threeCol}
+          title={threeCol ? 'Sekmeli görünüme dön (2 sütun)' : 'Şarkı sözlerini ve kuyruğu yan yana aç (3 sütun)'}
+          aria-label="3 sütun görünümü"
+          aria-pressed={threeCol}
+          onclick={ontogglecolumns}
+        >
+          <Icon name="columns" size={17} />
+        </button>
+      {/if}
+    </div>
   </header>
 
   {#if !threeCol && tab === 'lyrics'}
@@ -123,6 +160,14 @@
             onclick={() => player.startRadio(track)}
           >
             <Icon name="radio" size={15} />
+          </button>
+          <button
+            class="btn ghost icon q-radio-btn q-remove-btn"
+            title="Kuyruktan Kaldır"
+            aria-label="Kuyruktan Kaldır"
+            onclick={() => player.removeFromQueue(i)}
+          >
+            <Icon name="close" size={14} />
           </button>
         </li>
       {/each}
@@ -221,6 +266,21 @@
     color: var(--text-muted);
     font-size: 11.5px;
     font-weight: 700;
+  }
+  .q-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .q-act-btn {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    color: var(--text-muted);
+  }
+  .q-act-btn:hover {
+    color: var(--accent);
   }
   .col-btn {
     width: 36px;
@@ -355,7 +415,22 @@
     }
   }
   @media (max-width: 1120px) {
-    .col-btn {
+    .q-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .q-act-btn {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    color: var(--text-muted);
+  }
+  .q-act-btn:hover {
+    color: var(--accent);
+  }
+  .col-btn {
       display: none;
     }
   }

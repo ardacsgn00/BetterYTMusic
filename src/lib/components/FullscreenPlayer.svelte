@@ -249,6 +249,17 @@
                 <button
                   type="button"
                   class="btn fs-action-btn"
+                  disabled={player.radioLoading}
+                  title="{track.artist} ve benzer sanatçılardan kesintisiz radyo başlat"
+                  onclick={() => player.startArtistRadio(track.artist)}
+                >
+                  <Icon name="sparkles" size={16} />
+                  <span>Sanatçı Radyosu</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn fs-action-btn"
                   class:accent={player.settings.autoplay}
                   title="Kuyruk bitince benzer şarkıları otomatik çal"
                   onclick={() => player.updateSettings({ autoplay: !player.settings.autoplay })}
